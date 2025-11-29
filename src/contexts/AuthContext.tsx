@@ -10,9 +10,13 @@ interface AuthContextType {
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  verifyOTP: (phone: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isActive: boolean;
+  isPending: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,10 +71,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe: boolean = false) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        persistSession: true,
+      }
+    });
+
+    if (error) throw error;
+
+    if (rememberMe) {
+      await supabase.auth.updateUser({
+        data: { remember_me: true }
+      });
+    }
+  };
+
+  const signInWithPhone = async (phone: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      phone,
+    });
+
+    if (error) throw error;
+  };
+
+  const verifyOTP = async (phone: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      phone,
+      token,
+      type: 'sms',
     });
 
     if (error) throw error;
@@ -88,8 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     signIn,
+    signInWithPhone,
+    verifyOTP,
     signOut,
     isAdmin: profile?.role === 'admin',
+    isActive: profile?.status === 'active',
+    isPending: profile?.status === 'pending_approval',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

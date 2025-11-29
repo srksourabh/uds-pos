@@ -6,6 +6,7 @@ import {
   Smartphone,
   ClipboardList,
   Users,
+  UserCheck,
   Bell,
   LogOut,
   Menu,
@@ -25,7 +26,10 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Devices', href: '/devices', icon: Smartphone },
     { name: 'Calls', href: '/calls', icon: ClipboardList },
-    ...(profile?.role === 'admin' ? [{ name: 'Engineers', href: '/engineers', icon: Users }] : []),
+    ...(profile?.role === 'admin' ? [
+      { name: 'Engineers', href: '/engineers', icon: Users },
+      { name: 'Approvals', href: '/approvals', icon: UserCheck }
+    ] : []),
   ];
 
   const handleSignOut = async () => {

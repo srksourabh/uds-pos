@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isActive, isPending } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,18 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }
 
   if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!profile) {
+    return <Navigate to="/profile-setup" replace />;
+  }
+
+  if (isPending) {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
+  if (!isActive) {
     return <Navigate to="/login" replace />;
   }
 

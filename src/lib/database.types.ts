@@ -40,8 +40,18 @@ export type Database = {
           phone: string | null
           role: 'admin' | 'engineer'
           bank_id: string | null
+          region: string | null
+          skills: Json
+          status: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          avatar_url: string | null
+          last_location_lat: number | null
+          last_location_lng: number | null
+          last_location_updated_at: string | null
+          totp_enabled: boolean
+          metadata: Json
           active: boolean
           created_at: string
+          updated_at: string
         }
         Insert: {
           id: string
@@ -50,8 +60,18 @@ export type Database = {
           phone?: string | null
           role?: 'admin' | 'engineer'
           bank_id?: string | null
+          region?: string | null
+          skills?: Json
+          status?: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          avatar_url?: string | null
+          last_location_lat?: number | null
+          last_location_lng?: number | null
+          last_location_updated_at?: string | null
+          totp_enabled?: boolean
+          metadata?: Json
           active?: boolean
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -60,7 +80,49 @@ export type Database = {
           phone?: string | null
           role?: 'admin' | 'engineer'
           bank_id?: string | null
+          region?: string | null
+          skills?: Json
+          status?: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          avatar_url?: string | null
+          last_location_lat?: number | null
+          last_location_lng?: number | null
+          last_location_updated_at?: string | null
+          totp_enabled?: boolean
+          metadata?: Json
           active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      photos: {
+        Row: {
+          id: string
+          device_id: string
+          call_id: string | null
+          uploaded_by: string
+          photo_type: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
+          storage_path: string
+          caption: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          device_id: string
+          call_id?: string | null
+          uploaded_by: string
+          photo_type: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
+          storage_path: string
+          caption?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          device_id?: string
+          call_id?: string | null
+          uploaded_by?: string
+          photo_type?: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
+          storage_path?: string
+          caption?: string | null
           created_at?: string
         }
       }
