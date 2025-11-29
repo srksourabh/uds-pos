@@ -11,6 +11,9 @@ import {
   Clock,
   CheckCircle
 } from 'lucide-react';
+import { CallsTrendChart } from '../components/charts/CallsTrendChart';
+import { DeviceDistributionChart } from '../components/charts/DeviceDistributionChart';
+import { PriorityPieChart } from '../components/charts/PriorityPieChart';
 
 interface DashboardStats {
   totalDevices: number;
@@ -38,18 +41,29 @@ export function Dashboard() {
     totalEngineers: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [callsTrendData, setCallsTrendData] = useState<any[]>([]);
+  const [deviceDistData, setDeviceDistData] = useState<any[]>([]);
+  const [priorityData, setPriorityData] = useState<any[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
 
   useEffect(() => {
     loadDashboardStats();
+    loadChartData();
 
     const devicesChannel = supabase
       .channel('dashboard-devices')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, loadDashboardStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, () => {
+        loadDashboardStats();
+        loadChartData();
+      })
       .subscribe();
 
     const callsChannel = supabase
       .channel('dashboard-calls')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, loadDashboardStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, () => {
+        loadDashboardStats();
+        loadChartData();
+      })
       .subscribe();
 
     return () => {
@@ -91,6 +105,72 @@ export function Dashboard() {
       console.error('Error loading dashboard stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadChartData = async () => {
+    try {
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return date.toISOString().split('T')[0];
+      });
+
+      const { data: calls } = await supabase
+        .from('calls')
+        .select('status, created_at, priority')
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+      const trendData = last7Days.map(date => {
+        const dayStart = new Date(date);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayCalls = (calls || []).filter(c => {
+          const callDate = new Date(c.created_at);
+          return callDate >= dayStart && callDate <= dayEnd;
+        });
+
+        return {
+          date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          pending: dayCalls.filter(c => c.status === 'pending').length,
+          assigned: dayCalls.filter(c => c.status === 'assigned').length,
+          in_progress: dayCalls.filter(c => c.status === 'in_progress').length,
+          completed: dayCalls.filter(c => c.status === 'completed').length,
+        };
+      });
+      setCallsTrendData(trendData);
+
+      const { data: devices } = await supabase
+        .from('devices')
+        .select('status, device_bank(name)');
+
+      const bankMap = new Map<string, any>();
+      (devices || []).forEach(device => {
+        const bankName = device.device_bank?.name || 'Unknown';
+        if (!bankMap.has(bankName)) {
+          bankMap.set(bankName, { bank: bankName, warehouse: 0, issued: 0, installed: 0, faulty: 0 });
+        }
+        const bankData = bankMap.get(bankName)!;
+        if (device.status === 'warehouse') bankData.warehouse++;
+        else if (device.status === 'issued') bankData.issued++;
+        else if (device.status === 'installed') bankData.installed++;
+        else if (device.status === 'faulty') bankData.faulty++;
+      });
+      setDeviceDistData(Array.from(bankMap.values()));
+
+      const activeCalls = (calls || []).filter(c => ['pending', 'assigned', 'in_progress'].includes(c.status));
+      const priority = [
+        { name: 'Low', value: activeCalls.filter(c => c.priority === 'low').length },
+        { name: 'Medium', value: activeCalls.filter(c => c.priority === 'medium').length },
+        { name: 'High', value: activeCalls.filter(c => c.priority === 'high').length },
+        { name: 'Urgent', value: activeCalls.filter(c => c.priority === 'urgent').length },
+      ];
+      setPriorityData(priority);
+    } catch (error) {
+      console.error('Error loading chart data:', error);
+    } finally {
+      setChartsLoading(false);
     }
   };
 
@@ -205,6 +285,23 @@ export function Dashboard() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Calls Trend (Last 7 Days)</h2>
+          <CallsTrendChart data={callsTrendData} loading={chartsLoading} />
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Calls by Priority</h2>
+          <PriorityPieChart data={priorityData} loading={chartsLoading} />
+        </div>
+      </div>
+
+      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Distribution by Bank</h2>
+        <DeviceDistributionChart data={deviceDistData} loading={chartsLoading} />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Status Overview</h2>
           <div className="space-y-4">
