@@ -10,6 +10,10 @@ import { Devices } from './pages/Devices';
 import { Calls } from './pages/Calls';
 import { Engineers } from './pages/Engineers';
 import { Approvals } from './pages/Approvals';
+import MobileCalls from './pages/mobile/MobileCalls';
+import MobileCallDetail from './pages/mobile/MobileCallDetail';
+import MobileScanDevice from './pages/mobile/MobileScanDevice';
+import MobileCompleteCall from './pages/mobile/MobileCompleteCall';
 
 function App() {
   return (
@@ -70,6 +74,40 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/mobile/calls"
+            element={
+              <ProtectedRoute>
+                <MobileCalls />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mobile/calls/:id"
+            element={
+              <ProtectedRoute>
+                <MobileCallDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mobile/calls/:id/scan"
+            element={
+              <ProtectedRoute>
+                <MobileScanDevice />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mobile/calls/:id/complete"
+            element={
+              <ProtectedRoute>
+                <MobileCompleteCall />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
