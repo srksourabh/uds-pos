@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  Building2
+  Building2,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -26,6 +27,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Devices', href: '/devices', icon: Smartphone },
     { name: 'Calls', href: '/calls', icon: ClipboardList },
+    { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft },
     ...(profile?.role === 'admin' ? [
       { name: 'Engineers', href: '/engineers', icon: Users },
       { name: 'Approvals', href: '/approvals', icon: UserCheck }

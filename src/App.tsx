@@ -10,6 +10,7 @@ import { Devices } from './pages/Devices';
 import { Calls } from './pages/Calls';
 import { Engineers } from './pages/Engineers';
 import { Approvals } from './pages/Approvals';
+import { StockMovements } from './pages/StockMovements';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -70,6 +71,16 @@ function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Approvals />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stock-movements"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <StockMovements />
                 </Layout>
               </ProtectedRoute>
             }
