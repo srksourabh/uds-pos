@@ -1,176 +1,165 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const startTime = Date.now();
 
+  try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse('Missing authorization header', 'UNAUTHORIZED', 401);
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return errorResponse('Invalid token', 'UNAUTHORIZED', 401);
     }
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('role, status')
-      .eq('id', user.id)
+      .select('role')
+      .eq('user_id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin' || profile.status !== 'active') {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (profile?.role !== 'admin') {
+      return errorResponse('Admin role required', 'FORBIDDEN', 403);
     }
 
-    const { bankId = null, startDate = null, endDate = null, includeMovements = false } = await req.json();
+    const url = new URL(req.url);
+    const bankId = url.searchParams.get('bankId');
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+    const includeMovements = url.searchParams.get('includeMovements') === 'true';
 
-    let query = supabase
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      return errorResponse('Start date must be before end date', 'INVALID_DATE_RANGE', 400);
+    }
+
+    let devicesQuery = supabase
       .from('devices')
-      .select(`
-        id,
-        serial_number,
-        model,
-        status,
-        bank:device_bank(id, name, code),
-        assigned_engineer:assigned_to(id, full_name),
-        installed_at_client,
-        installation_date,
-        warranty_expiry,
-        last_maintenance_date,
-        created_at,
-        updated_at
-      `);
+      .select('*, banks(bank_code, bank_name)');
 
     if (bankId) {
-      query = query.eq('device_bank', bankId);
+      devicesQuery = devicesQuery.eq('device_bank', bankId);
     }
 
-    if (startDate) {
-      query = query.gte('updated_at', startDate);
-    }
-
-    if (endDate) {
-      query = query.lte('updated_at', endDate);
-    }
-
-    const { data: devices, error: devicesError } = await query.order('serial_number');
+    const { data: devices, error: devicesError } = await devicesQuery;
 
     if (devicesError) {
-      return new Response(JSON.stringify({ error: devicesError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error('Devices query error:', devicesError);
+      return errorResponse('Failed to fetch devices', 'INTERNAL_SERVER_ERROR', 500);
     }
 
-    let movementsData: any[] = [];
-    if (includeMovements) {
-      const deviceIds = devices?.map(d => d.id) || [];
-      if (deviceIds.length > 0) {
-        const { data: movements } = await supabase
-          .from('stock_movements')
-          .select(`
-            *,
-            device:device_id(serial_number),
-            from_eng:from_engineer(full_name),
-            to_eng:to_engineer(full_name),
-            actor:actor_id(full_name)
-          `)
-          .in('device_id', deviceIds)
-          .order('created_at', { ascending: false })
-          .limit(1000);
-
-        movementsData = movements || [];
-      }
+    if (!devices || devices.length > 100000) {
+      return errorResponse('Export too large (>100K rows)', 'EXPORT_TOO_LARGE', 413);
     }
 
-    const csvRows: string[] = [];
-    csvRows.push('Serial Number,Model,Bank Code,Bank Name,Status,Assigned To,Installed At,Installation Date,Warranty Expiry,Last Maintenance,Days Since Update,Created At,Updated At');
+    const statusCounts: Record<string, number> = {};
+    const bankCounts: Record<string, number> = {};
 
-    for (const device of devices || []) {
-      const daysSinceUpdate = Math.floor((Date.now() - new Date(device.updated_at).getTime()) / (1000 * 60 * 60 * 24));
-      csvRows.push([
-        device.serial_number,
-        device.model,
-        device.bank?.code || '',
-        device.bank?.name || '',
-        device.status,
-        device.assigned_engineer?.full_name || '',
-        device.installed_at_client || '',
-        device.installation_date || '',
-        device.warranty_expiry || '',
-        device.last_maintenance_date || '',
-        daysSinceUpdate.toString(),
-        device.created_at,
-        device.updated_at,
-      ].map(field => `"${field}"`).join(','));
-    }
+    devices.forEach(device => {
+      statusCounts[device.status] = (statusCounts[device.status] || 0) + 1;
+      const bankCode = device.banks?.bank_code || 'unknown';
+      bankCounts[bankCode] = (bankCounts[bankCode] || 0) + 1;
+    });
 
-    const csvContent = csvRows.join('\n');
+    const devicesCsvHeader = 'serial_number,model,status,bank_code,assigned_to,installed_at,last_updated\n';
+    const devicesCsvRows = devices.map(d => 
+      `"${d.serial_number}","${d.model}","${d.status}","${d.banks?.bank_code || ''}","${d.assigned_to || ''}","${d.installed_at_client || ''}","${d.updated_at}"`
+    ).join('\n');
+    const devicesCsv = devicesCsvHeader + devicesCsvRows;
 
     let movementsCsv = '';
-    if (includeMovements && movementsData.length > 0) {
-      const movementRows: string[] = [];
-      movementRows.push('Device Serial,Movement Type,From Status,To Status,From Engineer,To Engineer,Actor,Reason,Notes,Created At');
-      
-      for (const movement of movementsData) {
-        movementRows.push([
-          movement.device?.serial_number || '',
-          movement.movement_type,
-          movement.from_status,
-          movement.to_status,
-          movement.from_eng?.full_name || movement.from_location || '',
-          movement.to_eng?.full_name || movement.to_location || '',
-          movement.actor?.full_name || '',
-          movement.reason,
-          movement.notes || '',
-          movement.created_at,
-        ].map(field => `"${field}"`).join(','));
+    let movementCount = 0;
+
+    if (includeMovements) {
+      let movementsQuery = supabase
+        .from('stock_movements')
+        .select('*, devices(serial_number)')
+        .order('created_at', { ascending: false })
+        .limit(10000);
+
+      if (startDate) {
+        movementsQuery = movementsQuery.gte('created_at', startDate);
       }
-      movementsCsv = movementRows.join('\n');
+
+      if (endDate) {
+        movementsQuery = movementsQuery.lte('created_at', endDate);
+      }
+
+      const { data: movements } = await movementsQuery;
+
+      if (movements && movements.length > 0) {
+        movementCount = movements.length;
+        const movementsCsvHeader = 'device_serial,movement_type,from_status,to_status,from_location,to_location,performed_by,created_at,notes\n';
+        const movementsCsvRows = movements.map(m => 
+          `"${m.devices?.serial_number || ''}","${m.movement_type}","${m.from_status}","${m.to_status}","${m.from_location}","${m.to_location}","${m.performed_by}","${m.created_at}","${m.notes || ''}"`
+        ).join('\n');
+        movementsCsv = movementsCsvHeader + movementsCsvRows;
+      }
     }
 
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `reconciliation_${timestamp}.csv`;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `reconciliation-${timestamp}.csv`;
 
-    return new Response(JSON.stringify({
+    logStructured('info', 'reconciliation-export', {
+      device_count: devices.length,
+      movement_count: movementCount,
+      bank_id: bankId,
+      duration_ms: Date.now() - startTime,
+    });
+
+    const response = {
       success: true,
-      filename: filename,
-      devicesCsv: csvContent,
-      movementsCsv: movementsCsv,
-      deviceCount: devices?.length || 0,
-      movementCount: movementsData.length,
-    }), {
-      status: 200,
+      filename,
+      devicesCsv,
+      movementsCsv: movementsCsv || undefined,
+      deviceCount: devices.length,
+      movementCount,
+      summary: {
+        total_devices: devices.length,
+        by_status: statusCounts,
+        by_bank: bankCounts,
+      },
+    };
+
+    return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('reconciliation-export error:', error);
+    return errorResponse(error.message, 'INTERNAL_SERVER_ERROR', 500);
   }
 });
+
+function errorResponse(message: string, code: string, status: number) {
+  return new Response(
+    JSON.stringify({ error: message, error_code: code }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
+  );
+}
+
+function logStructured(level: string, functionName: string, payload: any) {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    function: functionName,
+    ...payload,
+  }));
+}

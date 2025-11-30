@@ -1,12 +1,10 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-import { calculateDistance } from './utils/geo.ts';
-import { calculateScores, filterEligibleEngineers, rankEngineers } from './utils/scoring.ts';
-import type { AssignCallsRequest, AssignCallsResponse, Engineer, Call, Assignment, UnassignedCall } from './types.ts';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 const DEFAULT_WEIGHTS = {
@@ -16,18 +14,24 @@ const DEFAULT_WEIGHTS = {
   stock: 0.20,
 };
 
+const PRIORITY_VALUES = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  urgent: 4,
+};
+
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      return errorResponse('Missing authorization header', 'UNAUTHORIZED', 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -37,13 +41,20 @@ Deno.serve(async (req: Request) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse('Invalid token', 'UNAUTHORIZED', 401);
     }
 
-    const body = await req.json() as AssignCallsRequest;
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      return errorResponse('Admin role required', 'FORBIDDEN', 403);
+    }
+
+    const body = await req.json();
     const {
       call_ids,
       weight_overrides,
@@ -52,259 +63,216 @@ Deno.serve(async (req: Request) => {
       force_reassign = false,
     } = body;
 
-    if (!call_ids || !Array.isArray(call_ids) || call_ids.length === 0) {
-      throw new Error('Invalid call_ids: must be non-empty array');
+    if (!call_ids || !Array.isArray(call_ids) || call_ids.length === 0 || call_ids.length > 100) {
+      return errorResponse('call_ids must be array with 1-100 items', 'INVALID_CALL_IDS', 400);
     }
 
     const weights = { ...DEFAULT_WEIGHTS, ...weight_overrides };
     const weightSum = Object.values(weights).reduce((a, b) => a + b, 0);
     if (Math.abs(weightSum - 1.0) > 0.01) {
-      throw new Error(`Weights must sum to 1.0, got ${weightSum}`);
+      return errorResponse(`Weights must sum to 1.0, got ${weightSum}`, 'INVALID_WEIGHTS', 400);
     }
 
-    const result = await assignCalls({
-      supabase,
-      call_ids,
-      weights,
-      dry_run,
-      actor_id,
-      force_reassign,
-    });
+    const statusFilter = force_reassign ? ['pending', 'assigned'] : ['pending'];
+    const { data: calls, error: callsError } = await supabase
+      .from('calls')
+      .select('*, banks(bank_name, bank_code)')
+      .in('id', call_ids)
+      .in('status', statusFilter);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-  } catch (error) {
-    console.error('Assignment error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
-});
-
-async function assignCalls(params: {
-  supabase: any;
-  call_ids: string[];
-  weights: any;
-  dry_run: boolean;
-  actor_id: string;
-  force_reassign: boolean;
-}): Promise<AssignCallsResponse> {
-  const startTime = Date.now();
-  const { supabase, call_ids, weights, dry_run, actor_id, force_reassign } = params;
-
-  const statusFilter = force_reassign ? ['pending', 'assigned'] : ['pending'];
-  const { data: calls, error: callsError } = await supabase
-    .from('calls')
-    .select('*')
-    .in('id', call_ids)
-    .in('status', statusFilter);
-
-  if (callsError) throw callsError;
-  if (!calls || calls.length === 0) {
-    throw new Error('No eligible calls found for given IDs');
-  }
-
-  const bankIds = [...new Set(calls.map((c: Call) => c.client_bank))];
-  const { data: engineers, error: engineersError } = await supabase.rpc(
-    'get_engineers_with_stock',
-    { bank_ids: bankIds }
-  );
-
-  if (engineersError) throw engineersError;
-  if (!engineers || engineers.length === 0) {
-    return {
-      success: true,
-      assignments: [],
-      unassigned: calls.map((call: Call) => ({
-        call_id: call.id,
-        call_number: call.call_number,
-        reason: 'no_engineers_in_bank' as const,
-        details: `No active engineers available for bank ${call.client_bank}`,
-        eligible_count: 0,
-        considered_count: 0,
-      })),
-      statistics: {
-        total_calls: calls.length,
-        assigned_count: 0,
-        unassigned_count: calls.length,
-        avg_score: 0,
-        avg_distance_km: 0,
-        execution_time_ms: Date.now() - startTime,
-        engineers_utilized: 0,
-      },
-    };
-  }
-
-  calls.sort((a: Call, b: Call) => {
-    const priorityOrder: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
-    return priorityOrder[b.priority] - priorityOrder[a.priority];
-  });
-
-  const assignments: Assignment[] = [];
-  const unassigned: UnassignedCall[] = [];
-  const engineerWorkloads = new Map<string, number>();
-  const engineerStocks = new Map<string, Map<string, number>>();
-
-  engineers.forEach((eng: Engineer) => {
-    engineerWorkloads.set(eng.id, Number(eng.active_calls_count));
-    const stockMap = new Map<string, number>();
-    if (eng.stock_count_by_bank) {
-      Object.entries(eng.stock_count_by_bank).forEach(([bankId, count]) => {
-        stockMap.set(bankId, count as number);
-      });
-    }
-    engineerStocks.set(eng.id, stockMap);
-  });
-
-  for (const call of calls) {
-    const eligible = filterEligibleEngineers(engineers, call, engineerStocks);
-
-    if (eligible.length === 0) {
-      unassigned.push({
-        call_id: call.id,
-        call_number: call.call_number,
-        reason: determineUnassignedReason(engineers, call, engineerStocks),
-        details: generateUnassignedDetails(engineers, call, engineerStocks),
-        eligible_count: 0,
-        considered_count: engineers.length,
-      });
-      continue;
+    if (callsError) {
+      return errorResponse('Failed to fetch calls', 'INTERNAL_SERVER_ERROR', 500);
     }
 
-    const scored = eligible.map((engineer: Engineer) => ({
-      engineer,
-      scores: calculateScores(engineer, call, weights, engineerWorkloads),
-    }));
+    const { data: engineers, error: engError } = await supabase
+      .from('user_profiles')
+      .select('*, banks(bank_name, bank_code), engineer_aggregates(*)')
+      .eq('role', 'engineer')
+      .eq('is_active', true);
 
-    scored.sort((a, b) => rankEngineers(a, b, engineerStocks, call.client_bank));
-    const winner = scored[0];
+    if (engError) {
+      return errorResponse('Failed to fetch engineers', 'INTERNAL_SERVER_ERROR', 500);
+    }
 
-    if (!dry_run) {
-      const { data: assignResult, error: assignError } = await supabase.rpc(
-        'assign_call_to_engineer',
-        {
-          p_call_id: call.id,
-          p_engineer_id: winner.engineer.id,
-          p_actor_id: actor_id,
-          p_reason: 'Auto-assigned via algorithm',
-        }
-      );
+    const assignments: any[] = [];
+    const unassigned: any[] = [];
+    const engineerUtilization = new Set<string>();
 
-      if (assignError || !assignResult?.success) {
+    for (const call of calls) {
+      const eligible = engineers.filter(eng => eng.bank_id === call.client_bank && eng.is_active);
+
+      if (eligible.length === 0) {
         unassigned.push({
           call_id: call.id,
           call_number: call.call_number,
-          reason: 'validation_failed' as const,
-          details: assignResult?.error || assignError?.message || 'Unknown error',
-          eligible_count: eligible.length,
+          reason: 'no_eligible_engineers',
+          details: `No engineers available for bank ${call.banks?.bank_code}`,
+          eligible_count: 0,
           considered_count: engineers.length,
         });
         continue;
       }
-    }
 
-    engineerWorkloads.set(winner.engineer.id, (engineerWorkloads.get(winner.engineer.id) || 0) + 1);
-    const stockMap = engineerStocks.get(winner.engineer.id)!;
-    if (call.type === 'install' || call.type === 'swap') {
-      const currentStock = stockMap.get(call.client_bank) || 0;
-      if (currentStock > 0) {
-        stockMap.set(call.client_bank, currentStock - 1);
+      const scored = eligible.map(engineer => {
+        const distance = calculateDistance(
+          engineer.latitude,
+          engineer.longitude,
+          call.latitude,
+          call.longitude
+        );
+
+        const proximityScore = distance !== null
+          ? Math.max(0, (1 - distance / 100)) * 100
+          : 50;
+
+        const priorityValue = PRIORITY_VALUES[call.priority as keyof typeof PRIORITY_VALUES] || 1;
+        const priorityScore = (priorityValue / 4) * 100;
+
+        const workload = engineer.engineer_aggregates?.[0]?.active_calls_count || 0;
+        const workloadScore = Math.max(0, (1 - workload / 10)) * 100;
+
+        const stock = engineer.engineer_aggregates?.[0]?.current_device_count || 0;
+        const stockScore = Math.min(stock / 10, 1) * 100;
+
+        const totalScore = (
+          proximityScore * weights.proximity +
+          priorityScore * weights.priority +
+          workloadScore * weights.workload +
+          stockScore * weights.stock
+        );
+
+        return {
+          engineer,
+          proximityScore,
+          priorityScore,
+          workloadScore,
+          stockScore,
+          totalScore,
+          distance,
+        };
+      });
+
+      const ranked = scored.sort((a, b) => b.totalScore - a.totalScore);
+      const best = ranked[0];
+
+      if (!dry_run) {
+        const { error: updateError } = await supabase
+          .from('calls')
+          .update({
+            status: 'assigned',
+            assigned_engineer: best.engineer.user_id,
+            assigned_at: new Date().toISOString(),
+            assigned_by: actor_id,
+          })
+          .eq('id', call.id);
+
+        if (updateError) {
+          unassigned.push({
+            call_id: call.id,
+            call_number: call.call_number,
+            reason: 'update_failed',
+            details: updateError.message,
+            eligible_count: eligible.length,
+            considered_count: eligible.length,
+          });
+          continue;
+        }
       }
+
+      engineerUtilization.add(best.engineer.user_id);
+      assignments.push({
+        call_id: call.id,
+        call_number: call.call_number,
+        assigned_engineer_id: best.engineer.user_id,
+        engineer_name: best.engineer.full_name,
+        score: best.totalScore,
+        score_breakdown: {
+          proximity_score: best.proximityScore,
+          priority_score: best.priorityScore,
+          workload_score: best.workloadScore,
+          stock_score: best.stockScore,
+        },
+        distance_km: best.distance || 0,
+        stock_available: best.engineer.engineer_aggregates?.[0]?.current_device_count || 0,
+        reason: `Best match with score ${best.totalScore.toFixed(2)}`,
+        assigned_at: new Date().toISOString(),
+      });
     }
 
-    assignments.push({
-      call_id: call.id,
-      call_number: call.call_number,
-      assigned_engineer_id: winner.engineer.id,
-      engineer_name: winner.engineer.full_name,
-      score: winner.scores.final_score,
-      score_breakdown: {
-        proximity_score: winner.scores.proximity_score,
-        priority_score: winner.scores.priority_score,
-        workload_score: winner.scores.workload_score,
-        stock_score: winner.scores.stock_score,
+    const avgScore = assignments.length > 0
+      ? assignments.reduce((sum, a) => sum + a.score, 0) / assignments.length
+      : 0;
+
+    const avgDistance = assignments.length > 0
+      ? assignments.reduce((sum, a) => sum + a.distance_km, 0) / assignments.length
+      : 0;
+
+    logStructured('info', 'assign-calls', {
+      assigned: assignments.length,
+      unassigned: unassigned.length,
+      duration_ms: Date.now() - startTime,
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      assignments,
+      unassigned,
+      statistics: {
+        total_calls: call_ids.length,
+        assigned_count: assignments.length,
+        unassigned_count: unassigned.length,
+        avg_score: avgScore,
+        avg_distance_km: avgDistance,
+        execution_time_ms: Date.now() - startTime,
+        engineers_utilized: engineerUtilization.size,
       },
-      distance_km: winner.scores.distance_km,
-      stock_available: stockMap.get(call.client_bank) || 0,
-      reason: generateAssignmentReason(winner.scores),
-      assigned_at: new Date().toISOString(),
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     });
+  } catch (error) {
+    console.error('assign-calls error:', error);
+    return errorResponse(error.message, 'INTERNAL_SERVER_ERROR', 500);
+  }
+});
+
+function calculateDistance(
+  lat1: number | null,
+  lon1: number | null,
+  lat2: number | null,
+  lon2: number | null
+): number | null {
+  if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) {
+    return null;
   }
 
-  return {
-    success: true,
-    assignments,
-    unassigned,
-    statistics: {
-      total_calls: calls.length,
-      assigned_count: assignments.length,
-      unassigned_count: unassigned.length,
-      avg_score: assignments.length > 0
-        ? assignments.reduce((sum, a) => sum + a.score, 0) / assignments.length
-        : 0,
-      avg_distance_km: assignments.length > 0
-        ? assignments.reduce((sum, a) => sum + (a.distance_km || 0), 0) / assignments.length
-        : 0,
-      execution_time_ms: Date.now() - startTime,
-      engineers_utilized: new Set(assignments.map(a => a.assigned_engineer_id)).size,
-    },
-  };
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
-function determineUnassignedReason(
-  engineers: Engineer[],
-  call: Call,
-  stockMap: Map<string, Map<string, number>>
-): 'no_eligible_engineers' | 'no_stock' | 'no_engineers_in_bank' | 'validation_failed' {
-  const bankEngineers = engineers.filter(e => e.bank_id === call.client_bank);
-  if (bankEngineers.length === 0) return 'no_engineers_in_bank';
-
-  const requiresDevice = call.type === 'install' || call.type === 'swap';
-  if (requiresDevice) {
-    const hasStock = bankEngineers.some(e => {
-      const stocks = stockMap.get(e.id);
-      return stocks && (stocks.get(call.client_bank) || 0) > 0;
-    });
-    if (!hasStock) return 'no_stock';
-  }
-
-  return 'no_eligible_engineers';
+function toRad(degrees: number): number {
+  return degrees * (Math.PI / 180);
 }
 
-function generateUnassignedDetails(
-  engineers: Engineer[],
-  call: Call,
-  stockMap: Map<string, Map<string, number>>
-): string {
-  const bankEngineers = engineers.filter(e => e.bank_id === call.client_bank);
-  if (bankEngineers.length === 0) {
-    return `No engineers available for bank ${call.client_bank}`;
-  }
-
-  const requiresDevice = call.type === 'install' || call.type === 'swap';
-  if (requiresDevice) {
-    const totalStock = bankEngineers.reduce((sum, e) => {
-      const stocks = stockMap.get(e.id);
-      return sum + (stocks?.get(call.client_bank) || 0);
-    }, 0);
-    if (totalStock === 0) {
-      return `No devices available in stock for bank. ${bankEngineers.length} engineers available but all have 0 stock.`;
-    }
-  }
-
-  return `${bankEngineers.length} engineers considered but none eligible`;
+function errorResponse(message: string, code: string, status: number) {
+  return new Response(
+    JSON.stringify({ error: message, error_code: code }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
+  );
 }
 
-function generateAssignmentReason(scores: any): string {
-  const factors = [];
-  if (scores.proximity_score > 70) factors.push('proximity');
-  if (scores.priority_score > 70) factors.push('priority');
-  if (scores.workload_score > 70) factors.push('low workload');
-  if (scores.stock_score > 70) factors.push('good stock');
-
-  if (factors.length === 0) factors.push('best available match');
-  return `Best match based on: ${factors.join(', ')}`;
+function logStructured(level: string, functionName: string, payload: any) {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    function: functionName,
+    ...payload,
+  }));
 }

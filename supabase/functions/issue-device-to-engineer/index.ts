@@ -1,117 +1,125 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { createHash } from "node:crypto";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+interface IssueBulkRequest {
+  deviceIds: string[];
+  engineerId: string;
+  notes?: string;
+  idempotency_key?: string;
+}
+
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const startTime = Date.now();
 
+  try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse('Missing authorization header', 'UNAUTHORIZED', 401);
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return errorResponse('Invalid token', 'UNAUTHORIZED', 401);
     }
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('role, status')
-      .eq('id', user.id)
+      .select('role')
+      .eq('user_id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin' || profile.status !== 'active') {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (profile?.role !== 'admin') {
+      return errorResponse('Admin role required', 'FORBIDDEN', 403);
     }
 
-    const { deviceIds, engineerId, notes = '' } = await req.json();
+    const body = await req.json() as IssueBulkRequest;
+    const { deviceIds, engineerId, notes, idempotency_key } = body;
 
-    if (!Array.isArray(deviceIds) || deviceIds.length === 0) {
-      return new Response(JSON.stringify({ error: 'Device IDs array required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!deviceIds || !Array.isArray(deviceIds) || deviceIds.length === 0) {
+      return errorResponse('deviceIds must be non-empty array', 'MISSING_REQUIRED_FIELDS', 400);
+    }
+
+    if (deviceIds.length > 100) {
+      return errorResponse('Cannot issue more than 100 devices at once', 'BULK_LIMIT_EXCEEDED', 400);
     }
 
     if (!engineerId) {
-      return new Response(JSON.stringify({ error: 'Engineer ID required' }), {
-        status: 400,
+      return errorResponse('engineerId is required', 'MISSING_REQUIRED_FIELDS', 400);
+    }
+
+    const idemKey = idempotency_key || createHash('sha256').update(`issue-${engineerId}-${deviceIds.join(',')}`).digest('hex');
+    
+    const { data: existingResult } = await supabase.rpc('check_idempotency_key', {
+      p_key: idemKey,
+      p_operation: 'issue_device_to_engineer',
+      p_user_id: user.id,
+      p_ttl_seconds: 300,
+    });
+
+    if (existingResult) {
+      return new Response(JSON.stringify(existingResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
       });
     }
 
-    const { data: engineer } = await supabase
+    const { data: engineer, error: engineerError } = await supabase
       .from('user_profiles')
-      .select('id, bank_id, status, role')
-      .eq('id', engineerId)
+      .select('*, banks(bank_code, bank_name)')
+      .eq('user_id', engineerId)
+      .eq('role', 'engineer')
       .single();
 
-    if (!engineer) {
-      return new Response(JSON.stringify({ error: 'Engineer not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (engineerError || !engineer) {
+      return errorResponse('Engineer not found', 'ENGINEER_NOT_FOUND', 404);
     }
 
-    if (engineer.role !== 'engineer') {
-      return new Response(JSON.stringify({ error: 'Target user is not an engineer' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!engineer.is_active) {
+      return errorResponse('Engineer is not active', 'ENGINEER_NOT_ACTIVE', 400);
     }
 
-    if (engineer.status !== 'active') {
-      return new Response(JSON.stringify({ error: 'Engineer is not active' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: devices } = await supabase
+    const { data: devices, error: devicesError } = await supabase
       .from('devices')
-      .select('id, serial_number, device_bank, status')
+      .select('*')
       .in('id', deviceIds);
 
-    if (!devices || devices.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid devices found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (devicesError || !devices || devices.length === 0) {
+      return errorResponse('No valid devices found', 'DEVICE_NOT_FOUND', 404);
     }
 
+    const successfulIds: string[] = [];
     const errors: string[] = [];
-    const successIds: string[] = [];
+    const movements: any[] = [];
 
     for (const device of devices) {
-      if (!['warehouse', 'returned'].includes(device.status)) {
-        errors.push(`${device.serial_number}: Not available (status: ${device.status})`);
+      if (device.status !== 'warehouse') {
+        errors.push(`Device ${device.serial_number}: not in warehouse (status: ${device.status})`);
         continue;
       }
 
       if (device.device_bank !== engineer.bank_id) {
-        errors.push(`${device.serial_number}: Bank mismatch`);
+        errors.push(`Device ${device.serial_number}: bank mismatch`);
+        continue;
+      }
+
+      if (device.status === 'faulty') {
+        errors.push(`Device ${device.serial_number}: marked as faulty`);
         continue;
       }
 
@@ -120,50 +128,94 @@ Deno.serve(async (req: Request) => {
         .update({
           status: 'issued',
           assigned_to: engineerId,
-          updated_at: new Date().toISOString(),
+          issued_at: new Date().toISOString(),
         })
-        .eq('id', device.id);
+        .eq('id', device.id)
+        .eq('status', 'warehouse');
 
       if (updateError) {
-        errors.push(`${device.serial_number}: ${updateError.message}`);
+        errors.push(`Device ${device.serial_number}: ${updateError.message}`);
         continue;
       }
 
-      const { error: movementError } = await supabase
-        .from('stock_movements')
-        .insert({
-          device_id: device.id,
-          movement_type: 'issuance',
-          from_status: device.status,
-          to_status: 'issued',
-          from_location: 'Central Warehouse',
-          to_engineer: engineerId,
-          actor_id: user.id,
-          reason: 'Issued by admin',
-          notes: notes,
-        });
-
-      if (movementError) {
-        errors.push(`${device.serial_number}: Movement log failed`);
-      } else {
-        successIds.push(device.id);
-      }
+      successfulIds.push(device.id);
+      movements.push({
+        device_id: device.id,
+        movement_type: 'issue',
+        from_status: 'warehouse',
+        to_status: 'issued',
+        from_location: 'warehouse',
+        to_location: 'engineer',
+        performed_by: user.id,
+        notes: notes || `Issued to ${engineer.full_name}`,
+      });
     }
 
-    return new Response(JSON.stringify({
-      success: errors.length === 0,
-      successCount: successIds.length,
+    if (movements.length > 0) {
+      await supabase.from('stock_movements').insert(movements);
+    }
+
+    await supabase.rpc('update_engineer_aggregates', {
+      p_engineer_id: engineerId,
+    });
+
+    const { data: updatedAgg } = await supabase
+      .from('engineer_aggregates')
+      .select('current_device_count')
+      .eq('engineer_id', engineerId)
+      .single();
+
+    const response = {
+      success: true,
+      successCount: successfulIds.length,
       errorCount: errors.length,
-      errors: errors,
-      issuedDeviceIds: successIds,
-    }), {
-      status: 200,
+      errors,
+      issuedDeviceIds: successfulIds,
+      engineer: {
+        id: engineer.user_id,
+        name: engineer.full_name,
+        bank: engineer.banks?.bank_code,
+        new_stock_count: updatedAgg?.current_device_count || successfulIds.length,
+      },
+      stock_movements_created: movements.length,
+    };
+
+    await supabase.rpc('store_idempotency_key', {
+      p_key: idemKey,
+      p_operation: 'issue_device_to_engineer',
+      p_response: response,
+      p_user_id: user.id,
+      p_ttl_seconds: 300,
+    });
+
+    logStructured('info', 'issue-device-to-engineer', {
+      engineer_id: engineerId,
+      devices_issued: successfulIds.length,
+      duration_ms: Date.now() - startTime,
+    });
+
+    return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('issue-device-to-engineer error:', error);
+    return errorResponse(error.message, 'INTERNAL_SERVER_ERROR', 500);
   }
 });
+
+function errorResponse(message: string, code: string, status: number) {
+  return new Response(
+    JSON.stringify({ error: message, error_code: code }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
+  );
+}
+
+function logStructured(level: string, functionName: string, payload: any) {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    function: functionName,
+    ...payload,
+  }));
+}
