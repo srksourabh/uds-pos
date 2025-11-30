@@ -22,6 +22,10 @@ import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
 import MobileCompleteCall from './pages/mobile/MobileCompleteCall';
+import MobileLogin from './pages/mobile/MobileLogin';
+import MobileInventory from './pages/mobile/MobileInventory';
+import MobilePhotoCapture from './pages/mobile/MobilePhotoCapture';
+import MobileInstallationFlow from './pages/mobile/MobileInstallationFlow';
 
 function App() {
   return (
@@ -192,6 +196,31 @@ function App() {
             element={
               <ProtectedRoute>
                 <MobileCompleteCall />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/mobile/login" element={<MobileLogin />} />
+          <Route
+            path="/mobile/inventory"
+            element={
+              <ProtectedRoute>
+                <MobileInventory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mobile/calls/:id/photo"
+            element={
+              <ProtectedRoute>
+                <MobilePhotoCapture />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mobile/calls/:id/installation"
+            element={
+              <ProtectedRoute>
+                <MobileInstallationFlow />
               </ProtectedRoute>
             }
           />

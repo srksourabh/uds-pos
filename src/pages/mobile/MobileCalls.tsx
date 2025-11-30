@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { OfflineQueueStatus } from '../../components/OfflineQueueStatus';
 import {
   MapPin,
   Clock,
@@ -10,7 +11,8 @@ import {
   Search,
   RefreshCw,
   WifiOff,
-  CheckCircle2
+  CheckCircle2,
+  Package
 } from 'lucide-react';
 
 interface Call {
@@ -160,6 +162,7 @@ export default function MobileCalls() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      <OfflineQueueStatus />
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sticky top-0 z-10 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold">My Calls</h1>
