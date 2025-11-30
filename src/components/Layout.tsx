@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   Building2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  PackagePlus,
+  Truck
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -27,9 +29,12 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Devices', href: '/devices', icon: Smartphone },
     { name: 'Calls', href: '/calls', icon: ClipboardList },
+    { name: 'Receive Stock', href: '/receive-stock', icon: PackagePlus },
+    { name: 'In Transit', href: '/in-transit', icon: Truck },
     { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft },
     ...(profile?.role === 'admin' ? [
       { name: 'Engineers', href: '/engineers', icon: Users },
+      { name: 'Banks', href: '/banks', icon: Building2 },
       { name: 'Approvals', href: '/approvals', icon: UserCheck }
     ] : []),
   ];
