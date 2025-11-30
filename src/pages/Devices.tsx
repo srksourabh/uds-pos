@@ -4,6 +4,7 @@ import { Search, Filter, Plus, Smartphone, Upload, UserPlus, CheckSquare } from 
 import type { Database } from '../lib/database.types';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { IssueDeviceModal } from '../components/IssueDeviceModal';
+import { AddDeviceModal } from '../components/AddDeviceModal';
 
 type Device = Database['public']['Tables']['devices']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
@@ -18,6 +19,7 @@ export function Devices() {
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadDevices();
@@ -123,7 +125,10 @@ export function Devices() {
             <Upload className="w-5 h-5 mr-2" />
             Import CSV
           </button>
-          <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
             <Plus className="w-5 h-5 mr-2" />
             Add Device
           </button>
@@ -294,6 +299,15 @@ export function Devices() {
           loadDevices();
           setSelectedDevices(new Set());
           setShowIssueModal(false);
+        }}
+      />
+
+      <AddDeviceModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          loadDevices();
+          setShowAddModal(false);
         }}
       />
     </div>

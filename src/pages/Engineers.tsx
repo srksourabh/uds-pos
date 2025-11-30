@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Plus, Users, Phone, Mail } from 'lucide-react';
 import type { Database } from '../lib/database.types';
+import { AddEngineerModal } from '../components/AddEngineerModal';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
@@ -11,6 +12,7 @@ export function Engineers() {
   const [engineers, setEngineers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadEngineers();
@@ -65,7 +67,10 @@ export function Engineers() {
           <h1 className="text-3xl font-bold text-gray-900">Engineers</h1>
           <p className="text-gray-600 mt-2">Manage field service engineers</p>
         </div>
-        <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
           <Plus className="w-5 h-5 mr-2" />
           Add Engineer
         </button>
@@ -148,6 +153,15 @@ export function Engineers() {
           Showing {filteredEngineers.length} of {engineers.length} engineers
         </p>
       </div>
+
+      <AddEngineerModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          loadEngineers();
+          setShowAddModal(false);
+        }}
+      />
     </div>
   );
 }

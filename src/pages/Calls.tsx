@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, Plus, ClipboardList, Calendar, MapPin } from 'lucide-react';
 import type { Database } from '../lib/database.types';
+import { CreateCallModal } from '../components/CreateCallModal';
 
 type Call = Database['public']['Tables']['calls']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
@@ -13,6 +14,7 @@ export function Calls() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadCalls();
@@ -94,7 +96,10 @@ export function Calls() {
           <h1 className="text-3xl font-bold text-gray-900">Calls</h1>
           <p className="text-gray-600 mt-2">Manage field service calls and assignments</p>
         </div>
-        <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
           <Plus className="w-5 h-5 mr-2" />
           Create Call
         </button>
@@ -199,6 +204,15 @@ export function Calls() {
           Showing {filteredCalls.length} of {calls.length} calls
         </p>
       </div>
+
+      <CreateCallModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          loadCalls();
+          setShowCreateModal(false);
+        }}
+      />
     </div>
   );
 }
