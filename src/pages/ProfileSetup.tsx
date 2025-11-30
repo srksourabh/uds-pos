@@ -21,6 +21,21 @@ export function ProfileSetup() {
       return;
     }
 
+    const checkProfile = async () => {
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (existingProfile) {
+        navigate('/');
+        return;
+      }
+    };
+
+    checkProfile();
+
     if (profile) {
       navigate('/');
       return;
@@ -54,8 +69,9 @@ export function ProfileSetup() {
         });
 
       if (profileError) {
-        if (profileError.message.includes('duplicate')) {
-          throw new Error('Profile already exists');
+        if (profileError.message.includes('duplicate') || profileError.code === '23505') {
+          navigate('/');
+          return;
         }
         throw profileError;
       }
