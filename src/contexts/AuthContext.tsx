@@ -14,6 +14,7 @@ interface AuthContextType {
   signInWithPhone: (phone: string) => Promise<void>;
   verifyOTP: (phone: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
+  reloadProfile: () => Promise<void>;
   isAdmin: boolean;
   isActive: boolean;
   isPending: boolean;
@@ -56,16 +57,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (userId: string) => {
     try {
+      console.log('Loading profile for user:', userId);
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading profile:', error);
+        throw error;
+      }
+
+      console.log('Profile loaded:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
@@ -113,6 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const reloadProfile = async () => {
+    if (user) {
+      await loadProfile(user.id);
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -122,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithPhone,
     verifyOTP,
     signOut,
+    reloadProfile,
     isAdmin: profile?.role === 'admin',
     isActive: profile?.status === 'active',
     isPending: profile?.status === 'pending_approval',

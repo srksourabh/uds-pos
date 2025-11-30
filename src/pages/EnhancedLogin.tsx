@@ -8,7 +8,7 @@ type PhoneStep = 'enter-phone' | 'enter-otp';
 
 export function EnhancedLogin() {
   const navigate = useNavigate();
-  const { signIn, signInWithPhone, verifyOTP, user, isPending } = useAuth();
+  const { signIn, signInWithPhone, verifyOTP, user, isPending, reloadProfile } = useAuth();
 
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [phoneStep, setPhoneStep] = useState<PhoneStep>('enter-phone');
@@ -40,6 +40,8 @@ export function EnhancedLogin() {
 
     try {
       await signIn(email, password, rememberMe);
+      await reloadProfile();
+      await new Promise(resolve => setTimeout(resolve, 500));
       navigate('/');
     } catch (err: any) {
       if (err.message?.includes('Invalid')) {
