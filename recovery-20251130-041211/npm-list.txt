@@ -1,0 +1,22 @@
+vite-react-typescript-starter@0.0.0 /tmp/cc-agent/60894296/project
++-- @eslint/js@9.12.0
++-- @supabase/supabase-js@2.57.4
++-- @types/react-dom@18.3.0
++-- @types/react@18.3.11
++-- @vitejs/plugin-react@4.3.2
++-- autoprefixer@10.4.20
++-- eslint-plugin-react-hooks@5.1.0-rc-fb9a90fa48-20240614
++-- eslint-plugin-react-refresh@0.4.12
++-- eslint@9.12.0
++-- globals@15.11.0
++-- lucide-react@0.344.0
++-- postcss@8.4.47
++-- react-dom@18.3.1
++-- react-router-dom@7.9.6
++-- react@18.3.1
++-- recharts@3.5.1
++-- tailwindcss@3.4.17
++-- typescript-eslint@8.8.1
++-- typescript@5.6.3
+`-- vite@5.4.8
+

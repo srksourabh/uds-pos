@@ -1,0 +1,13 @@
+supabase/functions/assign-calls/index.ts
+supabase/functions/start-call/index.ts
+supabase/functions/create-admin/index.ts
+supabase/functions/upload-photo/index.ts
+supabase/functions/auth-validator/index.ts
+supabase/functions/transfer-device/index.ts
+supabase/functions/scan-device/index.ts
+supabase/functions/mark-device-faulty/index.ts
+supabase/functions/bulk-import-devices/index.ts
+supabase/functions/create-test-engineer/index.ts
+supabase/functions/submit-call-completion/index.ts
+supabase/functions/reconciliation-export/index.ts
+supabase/functions/issue-device-to-engineer/index.ts

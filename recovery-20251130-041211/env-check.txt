@@ -1,0 +1,3 @@
+✓ .env file exists
+VITE_SUPABASE_URL=***MASKED***
+VITE_SUPABASE_ANON_KEY=***MASKED***
