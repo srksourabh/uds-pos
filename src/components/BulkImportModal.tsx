@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
-import { Upload, Download, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface BulkImportModalProps {

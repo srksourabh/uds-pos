@@ -34,7 +34,7 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
 
     const { data } = await supabase
       .from('user_profiles')
-      .select('*, bank:bank_id(name, code)')
+      .select('*')
       .eq('role', 'engineer')
       .eq('status', 'active')
       .in('bank_id', bankIds)
@@ -149,7 +149,7 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
               <option value="">Choose an engineer...</option>
               {engineers.map((engineer) => (
                 <option key={engineer.id} value={engineer.id}>
-                  {engineer.full_name} - {engineer.bank?.name || 'Unknown Bank'}
+                  {engineer.full_name}
                 </option>
               ))}
             </select>

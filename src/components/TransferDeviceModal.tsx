@@ -47,7 +47,7 @@ export function TransferDeviceModal({ isOpen, onClose, selectedDevice, onSuccess
 
     const { data } = await supabase
       .from('user_profiles')
-      .select('*, bank:bank_id(name, code)')
+      .select('*')
       .eq('role', 'engineer')
       .eq('status', 'active')
       .eq('bank_id', selectedDevice.device_bank)
@@ -176,7 +176,7 @@ export function TransferDeviceModal({ isOpen, onClose, selectedDevice, onSuccess
                 <option value="">Choose an engineer...</option>
                 {engineers.map((engineer) => (
                   <option key={engineer.id} value={engineer.id}>
-                    {engineer.full_name} - {engineer.bank?.name}
+                    {engineer.full_name}
                   </option>
                 ))}
               </select>
