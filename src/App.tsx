@@ -8,10 +8,14 @@ import { PendingApproval } from './pages/PendingApproval';
 import { Dashboard } from './pages/Dashboard';
 import { Devices } from './pages/Devices';
 import { Calls } from './pages/Calls';
+import { CallDetail } from './pages/CallDetail';
 import { Engineers } from './pages/Engineers';
 import { Banks } from './pages/Banks';
 import { Approvals } from './pages/Approvals';
 import { StockMovements } from './pages/StockMovements';
+import { Stock } from './pages/Stock';
+import { Alerts } from './pages/Alerts';
+import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
 import MobileCalls from './pages/mobile/MobileCalls';
@@ -54,6 +58,46 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Calls />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/calls/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CallDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stock"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Stock />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Alerts />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Reports />
                 </Layout>
               </ProtectedRoute>
             }

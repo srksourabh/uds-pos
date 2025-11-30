@@ -14,7 +14,9 @@ import {
   Building2,
   ArrowRightLeft,
   PackagePlus,
-  Truck
+  Truck,
+  Warehouse,
+  FileText
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -27,15 +29,18 @@ export function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Devices', href: '/devices', icon: Smartphone },
     { name: 'Calls', href: '/calls', icon: ClipboardList },
+    { name: 'Devices', href: '/devices', icon: Smartphone },
+    { name: 'Stock', href: '/stock', icon: Warehouse },
+    { name: 'Alerts', href: '/alerts', icon: Bell },
     { name: 'Receive Stock', href: '/receive-stock', icon: PackagePlus },
     { name: 'In Transit', href: '/in-transit', icon: Truck },
     { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft },
     ...(profile?.role === 'admin' ? [
       { name: 'Engineers', href: '/engineers', icon: Users },
       { name: 'Banks', href: '/banks', icon: Building2 },
-      { name: 'Approvals', href: '/approvals', icon: UserCheck }
+      { name: 'Approvals', href: '/approvals', icon: UserCheck },
+      { name: 'Reports', href: '/reports', icon: FileText }
     ] : []),
   ];
 
