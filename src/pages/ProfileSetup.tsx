@@ -6,7 +6,7 @@ import { UserCircle, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 export function ProfileSetup() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -74,6 +74,11 @@ export function ProfileSetup() {
     }
   };
 
+  const handleBackToLogin = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
@@ -97,13 +102,13 @@ export function ProfileSetup() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="mb-6">
-            <Link
-              to="/login"
+            <button
+              onClick={handleBackToLogin}
               className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Login
-            </Link>
+            </button>
           </div>
 
           <div className="flex flex-col items-center mb-8">
