@@ -1,0 +1,328 @@
+/*
+  # Create Stock Alerts Table
+
+  ## Overview
+  Automated alerts for inventory issues, low stock levels, overdue maintenance,
+  and operational anomalies. Supports alert lifecycle management with
+  acknowledgment and resolution tracking.
+
+  ## New Table: stock_alerts
+  Tracks system-generated and manual alerts
+
+  ## Alert Lifecycle
+  - active, acknowledged, resolved, dismissed
+
+  ## Security
+  - Admins can view and manage all alerts
+  - Engineers can view alerts relevant to their bank/devices
+*/
+
+-- Create alert type enum
+DO $$ BEGIN
+  CREATE TYPE alert_type AS ENUM (
+    'low_stock',
+    'device_overdue',
+    'faulty_device',
+    'missing_device',
+    'warranty_expiring',
+    'maintenance_due',
+    'engineer_idle',
+    'call_overdue'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Create alert severity enum
+DO $$ BEGIN
+  CREATE TYPE alert_severity AS ENUM (
+    'info',
+    'warning',
+    'critical',
+    'urgent'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Create alert status enum
+DO $$ BEGIN
+  CREATE TYPE alert_status AS ENUM (
+    'active',
+    'acknowledged',
+    'resolved',
+    'dismissed'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Create stock_alerts table
+CREATE TABLE IF NOT EXISTS stock_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  alert_type alert_type NOT NULL,
+  severity alert_severity NOT NULL DEFAULT 'warning',
+  
+  -- Related entities
+  bank_id uuid REFERENCES banks(id) ON DELETE CASCADE,
+  device_id uuid REFERENCES devices(id) ON DELETE CASCADE,
+  call_id uuid REFERENCES calls(id) ON DELETE CASCADE,
+  engineer_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
+  
+  -- Alert details
+  title text NOT NULL,
+  message text NOT NULL,
+  threshold_value numeric,
+  current_value numeric,
+  
+  -- Status tracking
+  status alert_status NOT NULL DEFAULT 'active',
+  acknowledged_by uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
+  acknowledged_at timestamptz,
+  resolved_by uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
+  resolved_at timestamptz,
+  resolution_notes text,
+  
+  -- Alert metadata
+  auto_generated boolean DEFAULT true,
+  expires_at timestamptz,
+  notification_sent boolean DEFAULT false,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE stock_alerts ENABLE ROW LEVEL SECURITY;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_type ON stock_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_severity ON stock_alerts(severity);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_status ON stock_alerts(status);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_bank ON stock_alerts(bank_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_device ON stock_alerts(device_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_call ON stock_alerts(call_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_engineer ON stock_alerts(engineer_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_created ON stock_alerts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_status_severity_created ON stock_alerts(status, severity, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_expires ON stock_alerts(expires_at) WHERE expires_at IS NOT NULL;
+
+-- RLS Policies
+
+-- Admins can view all alerts
+CREATE POLICY "Admins can view all alerts"
+  ON stock_alerts FOR SELECT
+  TO authenticated
+  USING (is_admin() AND is_user_active());
+
+-- Engineers can view alerts for their bank
+CREATE POLICY "Engineers can view relevant alerts"
+  ON stock_alerts FOR SELECT
+  TO authenticated
+  USING (
+    NOT is_admin() AND
+    is_user_active() AND
+    (
+      bank_id = get_user_bank() OR
+      engineer_id = auth.uid() OR
+      EXISTS (
+        SELECT 1 FROM devices
+        WHERE devices.id = stock_alerts.device_id
+        AND devices.assigned_to = auth.uid()
+      )
+    )
+  );
+
+-- Admins can create alerts
+CREATE POLICY "Admins can create alerts"
+  ON stock_alerts FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin() AND is_user_active());
+
+-- Admins can update alerts
+CREATE POLICY "Admins can update alerts"
+  ON stock_alerts FOR UPDATE
+  TO authenticated
+  USING (is_admin() AND is_user_active())
+  WITH CHECK (is_admin() AND is_user_active());
+
+-- Engineers can acknowledge alerts
+CREATE POLICY "Engineers can acknowledge alerts"
+  ON stock_alerts FOR UPDATE
+  TO authenticated
+  USING (
+    NOT is_admin() AND
+    is_user_active() AND
+    status = 'active' AND
+    (bank_id = get_user_bank() OR engineer_id = auth.uid())
+  )
+  WITH CHECK (
+    status = 'acknowledged' AND
+    acknowledged_by = auth.uid()
+  );
+
+-- Admins can delete alerts
+CREATE POLICY "Admins can delete alerts"
+  ON stock_alerts FOR DELETE
+  TO authenticated
+  USING (is_admin() AND is_user_active());
+
+-- Function to create low stock alert
+CREATE OR REPLACE FUNCTION check_and_create_low_stock_alerts()
+RETURNS void AS $$
+DECLARE
+  v_bank RECORD;
+  v_warehouse_count integer;
+  v_threshold integer := 8;
+BEGIN
+  FOR v_bank IN SELECT * FROM banks WHERE active = true LOOP
+    SELECT COUNT(*)
+    INTO v_warehouse_count
+    FROM devices
+    WHERE device_bank = v_bank.id
+      AND status = 'warehouse';
+    
+    IF v_warehouse_count < v_threshold THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM stock_alerts
+        WHERE bank_id = v_bank.id
+          AND alert_type = 'low_stock'
+          AND status = 'active'
+      ) THEN
+        INSERT INTO stock_alerts (
+          alert_type,
+          severity,
+          bank_id,
+          title,
+          message,
+          threshold_value,
+          current_value,
+          auto_generated,
+          metadata
+        ) VALUES (
+          'low_stock',
+          CASE
+            WHEN v_warehouse_count <= 3 THEN 'critical'::alert_severity
+            WHEN v_warehouse_count <= 5 THEN 'warning'::alert_severity
+            ELSE 'info'::alert_severity
+          END,
+          v_bank.id,
+          'Low Stock Alert - ' || v_bank.code,
+          v_bank.name || ' has only ' || v_warehouse_count || ' devices in warehouse. Minimum threshold is ' || v_threshold || '.',
+          v_threshold,
+          v_warehouse_count,
+          true,
+          jsonb_build_object(
+            'recommendation', 'Order ' || (v_threshold - v_warehouse_count + 2) || '-' || (v_threshold - v_warehouse_count + 10) || ' devices',
+            'bank_name', v_bank.name
+          )
+        );
+      END IF;
+    ELSE
+      UPDATE stock_alerts
+      SET status = 'resolved',
+          resolved_at = now(),
+          resolution_notes = 'Stock level restored to ' || v_warehouse_count || ' devices'
+      WHERE bank_id = v_bank.id
+        AND alert_type = 'low_stock'
+        AND status = 'active';
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check for overdue calls
+CREATE OR REPLACE FUNCTION check_and_create_overdue_call_alerts()
+RETURNS void AS $$
+DECLARE
+  v_call RECORD;
+BEGIN
+  FOR v_call IN
+    SELECT * FROM calls
+    WHERE scheduled_date < CURRENT_DATE
+      AND status NOT IN ('completed', 'cancelled')
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM stock_alerts
+      WHERE call_id = v_call.id
+        AND alert_type = 'call_overdue'
+        AND status = 'active'
+    ) THEN
+      INSERT INTO stock_alerts (
+        alert_type,
+        severity,
+        bank_id,
+        call_id,
+        engineer_id,
+        title,
+        message,
+        auto_generated
+      ) VALUES (
+        'call_overdue',
+        CASE
+          WHEN v_call.priority = 'urgent' THEN 'urgent'::alert_severity
+          WHEN v_call.priority = 'high' THEN 'critical'::alert_severity
+          ELSE 'warning'::alert_severity
+        END,
+        v_call.client_bank,
+        v_call.id,
+        v_call.assigned_engineer,
+        'Overdue Call - ' || v_call.call_number,
+        'Call ' || v_call.call_number || ' for ' || v_call.client_name || ' is overdue (scheduled: ' || v_call.scheduled_date || ')',
+        true
+      );
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check for expiring warranties
+CREATE OR REPLACE FUNCTION check_and_create_warranty_expiring_alerts()
+RETURNS void AS $$
+DECLARE
+  v_device RECORD;
+  v_days_until_expiry integer;
+BEGIN
+  FOR v_device IN
+    SELECT * FROM devices
+    WHERE warranty_expiry IS NOT NULL
+      AND warranty_expiry BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
+      AND status != 'returned'
+  LOOP
+    v_days_until_expiry := (v_device.warranty_expiry - CURRENT_DATE);
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM stock_alerts
+      WHERE device_id = v_device.id
+        AND alert_type = 'warranty_expiring'
+        AND status = 'active'
+    ) THEN
+      INSERT INTO stock_alerts (
+        alert_type,
+        severity,
+        bank_id,
+        device_id,
+        title,
+        message,
+        threshold_value,
+        current_value,
+        auto_generated
+      ) VALUES (
+        'warranty_expiring',
+        CASE
+          WHEN v_days_until_expiry <= 7 THEN 'critical'::alert_severity
+          WHEN v_days_until_expiry <= 14 THEN 'warning'::alert_severity
+          ELSE 'info'::alert_severity
+        END,
+        v_device.device_bank,
+        v_device.id,
+        'Warranty Expiring - ' || v_device.serial_number,
+        'Device ' || v_device.serial_number || ' (' || v_device.model || ') warranty expires in ' || v_days_until_expiry || ' days',
+        30,
+        v_days_until_expiry,
+        true
+      );
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
