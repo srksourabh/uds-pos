@@ -37,6 +37,16 @@ function App() {
           <Route path="/pending-approval" element={<PendingApproval />} />
 
           <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/"
             element={
               <ProtectedRoute>

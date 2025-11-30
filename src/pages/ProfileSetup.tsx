@@ -1,8 +1,8 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { UserCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserCircle, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 export function ProfileSetup() {
   const navigate = useNavigate();
@@ -96,6 +96,16 @@ export function ProfileSetup() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="mb-6">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </Link>
+          </div>
+
           <div className="flex flex-col items-center mb-8">
             <div className="bg-blue-600 p-3 rounded-xl mb-4">
               <UserCircle className="w-8 h-8 text-white" />
