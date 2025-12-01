@@ -59,32 +59,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Loading profile for user:', userId);
 
-      // Use RPC function to bypass RLS issues
-      const { data, error } = await supabase.rpc('get_my_profile');
+      // Try direct query first (simpler, works if RLS allows self-access)
+      const { data: directData, error: directError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error loading profile via RPC:', error);
-        // Fallback to direct query if RPC doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (fallbackError) {
-          console.error('Fallback query also failed:', fallbackError);
-          throw fallbackError;
-        }
-        setProfile(fallbackData);
+      if (!directError && directData) {
+        console.log('Profile loaded via direct query:', directData);
+        setProfile(directData);
         return;
       }
 
-      // RPC returns array, get first item
-      const profileData = Array.isArray(data) ? data[0] : data;
-      console.log('Profile loaded:', profileData);
-      setProfile(profileData || null);
+      // If direct query fails, try RPC function
+      if (directError) {
+        console.log('Direct query failed, trying RPC:', directError.message);
+
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_profile');
+
+          if (!rpcError && rpcData) {
+            const profileData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+            console.log('Profile loaded via RPC:', profileData);
+            setProfile(profileData || null);
+            return;
+          }
+
+          if (rpcError) {
+            console.log('RPC also failed:', rpcError.message);
+          }
+        } catch {
+          console.log('RPC function may not exist');
+        }
+      }
+
+      // No profile found - this is OK for new users
+      console.log('No profile found for user - will redirect to profile setup');
+      setProfile(null);
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Unexpected error loading profile:', error);
       setProfile(null);
     } finally {
       setLoading(false);

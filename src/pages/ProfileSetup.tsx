@@ -21,26 +21,13 @@ export function ProfileSetup() {
       return;
     }
 
-    const checkProfile = async () => {
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (existingProfile) {
-        navigate('/dashboard');
-        return;
-      }
-    };
-
-    checkProfile();
-
+    // If we already have a profile loaded, go to dashboard
     if (profile) {
       navigate('/dashboard');
       return;
     }
 
+    // Pre-fill from user auth data
     if (user.phone) {
       setPhone(user.phone);
     }
@@ -57,19 +44,46 @@ export function ProfileSetup() {
     try {
       if (!user) throw new Error('Not authenticated');
 
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: user.id,
-          email: email || `${user.id}@temp.com`,
-          full_name: fullName,
-          phone: phone,
-          role: 'engineer',
-          status: 'pending_approval',
+      // Try upsert_my_profile RPC first (if available)
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('upsert_my_profile', {
+          p_email: email || user.email || `${user.id}@temp.com`,
+          p_full_name: fullName,
+          p_phone: phone || null,
+          p_role: 'engineer',
+          p_status: 'pending_approval'
         });
 
+        if (!rpcError && rpcData) {
+          console.log('Profile created via RPC:', rpcData);
+          setSuccess(true);
+          setTimeout(() => navigate('/pending-approval'), 2000);
+          return;
+        }
+
+        if (rpcError) {
+          console.log('RPC failed, falling back to direct insert:', rpcError.message);
+        }
+      } catch {
+        console.log('RPC function may not exist, falling back to direct insert');
+      }
+
+      // Fallback: Try upsert directly
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          email: email || user.email || `${user.id}@temp.com`,
+          full_name: fullName,
+          phone: phone || null,
+          role: 'engineer',
+          status: 'pending_approval',
+        }, { onConflict: 'id' });
+
       if (profileError) {
-        if (profileError.message.includes('duplicate') || profileError.code === '23505') {
+        // 409 conflict means profile exists - try to navigate to dashboard
+        if (profileError.code === '23505' || profileError.message?.includes('duplicate') || profileError.message?.includes('conflict')) {
+          console.log('Profile already exists, navigating to dashboard');
           navigate('/dashboard');
           return;
         }
@@ -84,7 +98,13 @@ export function ProfileSetup() {
 
     } catch (err: any) {
       console.error('Profile setup error:', err);
-      setError(err.message || 'Failed to create profile. Please try again.');
+
+      // If we get any database error, it might be RLS - suggest they may need admin help
+      if (err.message?.includes('500') || err.message?.includes('permission') || err.message?.includes('policy')) {
+        setError('Database permission error. Please contact an administrator to set up your profile.');
+      } else {
+        setError(err.message || 'Failed to create profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
