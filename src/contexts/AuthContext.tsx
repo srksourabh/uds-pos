@@ -58,19 +58,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = async (userId: string) => {
     try {
       console.log('Loading profile for user:', userId);
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+
+      // Use RPC function to bypass RLS issues
+      const { data, error } = await supabase.rpc('get_my_profile');
 
       if (error) {
-        console.error('Error loading profile:', error);
-        throw error;
+        console.error('Error loading profile via RPC:', error);
+        // Fallback to direct query if RPC doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (fallbackError) {
+          console.error('Fallback query also failed:', fallbackError);
+          throw fallbackError;
+        }
+        setProfile(fallbackData);
+        return;
       }
 
-      console.log('Profile loaded:', data);
-      setProfile(data);
+      // RPC returns array, get first item
+      const profileData = Array.isArray(data) ? data[0] : data;
+      console.log('Profile loaded:', profileData);
+      setProfile(profileData || null);
     } catch (error) {
       console.error('Error loading profile:', error);
       setProfile(null);
