@@ -63,7 +63,7 @@ export function LandingPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">CoSTAR</span>
+              <span className="text-xl font-bold text-white">UDS Service</span>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -173,7 +173,7 @@ export function LandingPage() {
               Ready to Get Started?
             </h2>
             <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-              Join the leading banks using CoSTAR to manage their POS device operations efficiently.
+              Join the leading banks using UDS Service to manage their POS device operations efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -196,7 +196,7 @@ export function LandingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-bold text-white">CoSTAR</span>
+              <span className="text-lg font-bold text-white">UDS Service</span>
             </div>
             <p className="text-slate-400 text-sm">
               Field Service Management Platform

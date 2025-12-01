@@ -29,7 +29,7 @@ export function ProfileSetup() {
         .maybeSingle();
 
       if (existingProfile) {
-        navigate('/');
+        navigate('/dashboard');
         return;
       }
     };
@@ -37,7 +37,7 @@ export function ProfileSetup() {
     checkProfile();
 
     if (profile) {
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 
@@ -70,7 +70,7 @@ export function ProfileSetup() {
 
       if (profileError) {
         if (profileError.message.includes('duplicate') || profileError.code === '23505') {
-          navigate('/');
+          navigate('/dashboard');
           return;
         }
         throw profileError;

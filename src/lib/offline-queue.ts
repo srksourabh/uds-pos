@@ -8,7 +8,7 @@ interface QueuedAction {
   error?: string;
 }
 
-const QUEUE_KEY = 'costar_offline_queue';
+const QUEUE_KEY = 'uds_offline_queue';
 const MAX_RETRIES = 3;
 
 export class OfflineQueue {
