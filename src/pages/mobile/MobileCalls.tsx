@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocationTracking } from '../../hooks/useLocationTracking';
 import { OfflineQueueStatus } from '../../components/OfflineQueueStatus';
 import {
   MapPin,
   Clock,
   AlertCircle,
-  Filter,
   Search,
   RefreshCw,
   WifiOff,
   CheckCircle2,
-  Package
+  Navigation
 } from 'lucide-react';
 
 interface Call {
@@ -41,6 +41,13 @@ export default function MobileCalls() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [lastSync, setLastSync] = useState<Date>(new Date());
+
+  // Location tracking - automatically updates engineer's location
+  const { isTracking, error: locationError, latitude, longitude } = useLocationTracking({
+    autoStart: true,
+    updateInterval: 60000, // Update every minute
+    minDistanceForUpdate: 50 // Only update if moved 50+ meters
+  });
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -183,8 +190,20 @@ export default function MobileCalls() {
         )}
 
         {isOnline && (
-          <div className="text-xs text-blue-200">
-            Last synced: {lastSync.toLocaleTimeString()}
+          <div className="flex items-center justify-between text-xs text-blue-200">
+            <span>Last synced: {lastSync.toLocaleTimeString()}</span>
+            {isTracking && latitude && longitude && (
+              <span className="flex items-center gap-1">
+                <Navigation className="w-3 h-3" />
+                Location active
+              </span>
+            )}
+            {locationError && (
+              <span className="text-red-300 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {locationError}
+              </span>
+            )}
           </div>
         )}
 

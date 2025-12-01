@@ -19,6 +19,7 @@ import { Alerts } from './pages/Alerts';
 import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
+import { LiveMap } from './pages/LiveMap';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -108,6 +109,16 @@ function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Reports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/live-map"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <LiveMap />
                 </Layout>
               </ProtectedRoute>
             }

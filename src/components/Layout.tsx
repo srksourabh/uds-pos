@@ -16,7 +16,8 @@ import {
   PackagePlus,
   Truck,
   Warehouse,
-  FileText
+  FileText,
+  Map
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -37,6 +38,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'In Transit', href: '/in-transit', icon: Truck },
     { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft },
     ...(profile?.role === 'admin' ? [
+      { name: 'Live Map', href: '/live-map', icon: Map },
       { name: 'Engineers', href: '/engineers', icon: Users },
       { name: 'Banks', href: '/banks', icon: Building2 },
       { name: 'Approvals', href: '/approvals', icon: UserCheck },
