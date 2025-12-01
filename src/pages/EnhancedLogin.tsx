@@ -8,7 +8,7 @@ type PhoneStep = 'enter-phone' | 'enter-otp';
 
 export function EnhancedLogin() {
   const navigate = useNavigate();
-  const { signIn, signInWithPhone, verifyOTP, user, isPending, reloadProfile } = useAuth();
+  const { signIn, signInWithPhone, verifyOTP, user, profile, isPending, isActive, loading: authLoading, reloadProfile } = useAuth();
 
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [phoneStep, setPhoneStep] = useState<PhoneStep>('enter-phone');
@@ -25,13 +25,32 @@ export function EnhancedLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (user && !isPending) {
+  // Wait for auth state to be determined before making navigation decisions
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // User is logged in with an active profile - go to dashboard
+  if (user && profile && isActive) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (isPending) {
+  // User is pending approval
+  if (user && isPending) {
     return <Navigate to="/pending-approval" replace />;
   }
+
+  // User doesn't have a profile yet - go to profile setup
+  if (user && !profile) {
+    return <Navigate to="/profile-setup" replace />;
+  }
+
+  // If user exists but profile is inactive/rejected, show login form
+  // (they can sign out or contact admin)
 
   const handleEmailSubmit = async (e: FormEvent) => {
     e.preventDefault();
