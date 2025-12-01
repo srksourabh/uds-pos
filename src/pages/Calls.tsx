@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Filter, Plus, ClipboardList, Calendar, MapPin } from 'lucide-react';
+import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 import { CreateCallModal } from '../components/CreateCallModal';
+import { CSVUpload } from '../components/CSVUpload';
 
 type Call = Database['public']['Tables']['calls']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
@@ -15,6 +16,7 @@ export function Calls() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
 
   useEffect(() => {
     loadCalls();
@@ -96,13 +98,22 @@ export function Calls() {
           <h1 className="text-3xl font-bold text-gray-900">Calls</h1>
           <p className="text-gray-600 mt-2">Manage field service calls and assignments</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Call
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCSVUpload(true)}
+            className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            <Upload className="w-5 h-5 mr-2" />
+            Import CSV
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Call
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -213,6 +224,33 @@ export function Calls() {
           setShowCreateModal(false);
         }}
       />
+
+      {/* CSV Upload Modal */}
+      {showCSVUpload && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">Import Calls from CSV</h2>
+              <button
+                onClick={() => setShowCSVUpload(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              <CSVUpload
+                onComplete={(results) => {
+                  const successCount = results.filter(r => r.success).length;
+                  if (successCount > 0) {
+                    loadCalls();
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

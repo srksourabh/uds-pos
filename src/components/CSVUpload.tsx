@@ -1,0 +1,406 @@
+import { useState, useRef, useCallback } from 'react';
+import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Download } from 'lucide-react';
+import Papa from 'papaparse';
+import { supabase } from '../lib/supabase';
+
+interface CSVRow {
+  call_number?: string;
+  type?: string;
+  priority?: string;
+  client_name?: string;
+  client_contact?: string;
+  client_phone?: string;
+  client_address?: string;
+  latitude?: string;
+  longitude?: string;
+  scheduled_date?: string;
+  scheduled_time_window?: string;
+  description?: string;
+  client_bank?: string;
+  requires_photo?: string;
+}
+
+interface UploadResult {
+  success: boolean;
+  row: number;
+  call_number?: string;
+  error?: string;
+}
+
+interface CSVUploadProps {
+  onComplete?: (results: UploadResult[]) => void;
+  bankId?: string;
+}
+
+const REQUIRED_COLUMNS = ['call_number', 'type', 'client_name', 'client_address'];
+const VALID_TYPES = ['install', 'swap', 'deinstall', 'maintenance', 'breakdown'];
+const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+
+export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<CSVRow[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [results, setResults] = useState<UploadResult[]>([]);
+  const [step, setStep] = useState<'upload' | 'preview' | 'results'>('upload');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type === 'text/csv') {
+      processFile(droppedFile);
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      processFile(selectedFile);
+    }
+  }, []);
+
+  const processFile = (file: File) => {
+    setFile(file);
+    setValidationErrors([]);
+    setParsedData([]);
+
+    Papa.parse<CSVRow>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const errors: string[] = [];
+        const headers = results.meta.fields || [];
+
+        // Check required columns
+        REQUIRED_COLUMNS.forEach(col => {
+          if (!headers.includes(col)) {
+            errors.push(`Missing required column: ${col}`);
+          }
+        });
+
+        // Validate data
+        results.data.forEach((row, index) => {
+          const rowNum = index + 2; // +2 for header and 0-index
+
+          if (!row.call_number?.trim()) {
+            errors.push(`Row ${rowNum}: Missing call_number`);
+          }
+
+          if (row.type && !VALID_TYPES.includes(row.type.toLowerCase())) {
+            errors.push(`Row ${rowNum}: Invalid type "${row.type}". Must be one of: ${VALID_TYPES.join(', ')}`);
+          }
+
+          if (row.priority && !VALID_PRIORITIES.includes(row.priority.toLowerCase())) {
+            errors.push(`Row ${rowNum}: Invalid priority "${row.priority}". Must be one of: ${VALID_PRIORITIES.join(', ')}`);
+          }
+
+          if (row.latitude && isNaN(parseFloat(row.latitude))) {
+            errors.push(`Row ${rowNum}: Invalid latitude`);
+          }
+
+          if (row.longitude && isNaN(parseFloat(row.longitude))) {
+            errors.push(`Row ${rowNum}: Invalid longitude`);
+          }
+        });
+
+        setValidationErrors(errors);
+        setParsedData(results.data);
+        setStep('preview');
+      },
+      error: (error) => {
+        setValidationErrors([`Parse error: ${error.message}`]);
+      }
+    });
+  };
+
+  const uploadCalls = async () => {
+    setUploading(true);
+    const uploadResults: UploadResult[] = [];
+
+    for (let i = 0; i < parsedData.length; i++) {
+      const row = parsedData[i];
+      try {
+        const callData = {
+          call_number: row.call_number?.trim(),
+          type: row.type?.toLowerCase() || 'maintenance',
+          priority: row.priority?.toLowerCase() || 'medium',
+          status: 'pending',
+          client_name: row.client_name?.trim(),
+          client_contact: row.client_contact?.trim() || null,
+          client_phone: row.client_phone?.trim() || null,
+          client_address: row.client_address?.trim(),
+          latitude: row.latitude ? parseFloat(row.latitude) : null,
+          longitude: row.longitude ? parseFloat(row.longitude) : null,
+          scheduled_date: row.scheduled_date || null,
+          scheduled_time_window: row.scheduled_time_window || null,
+          description: row.description?.trim() || null,
+          client_bank: row.client_bank || bankId || null,
+          requires_photo: row.requires_photo?.toLowerCase() === 'true' || row.requires_photo === '1',
+        };
+
+        const { error } = await supabase
+          .from('calls')
+          .insert(callData);
+
+        if (error) {
+          uploadResults.push({
+            success: false,
+            row: i + 2,
+            call_number: row.call_number,
+            error: error.message,
+          });
+        } else {
+          uploadResults.push({
+            success: true,
+            row: i + 2,
+            call_number: row.call_number,
+          });
+        }
+      } catch (err) {
+        uploadResults.push({
+          success: false,
+          row: i + 2,
+          call_number: row.call_number,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    setResults(uploadResults);
+    setUploading(false);
+    setStep('results');
+    onComplete?.(uploadResults);
+  };
+
+  const downloadTemplate = () => {
+    const template = `call_number,type,priority,client_name,client_contact,client_phone,client_address,latitude,longitude,scheduled_date,scheduled_time_window,description,client_bank,requires_photo
+CALL-001,install,high,ABC Corp,John Doe,+91-9876543210,123 Main St Mumbai,19.076,72.8777,2024-01-15,09:00-12:00,New POS installation,bank-uuid-here,true
+CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi,28.6139,77.209,2024-01-16,14:00-17:00,Routine maintenance,bank-uuid-here,false`;
+
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calls_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const reset = () => {
+    setFile(null);
+    setParsedData([]);
+    setValidationErrors([]);
+    setResults([]);
+    setStep('upload');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  if (step === 'results') {
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Upload Results</h3>
+          <button
+            onClick={reset}
+            className="text-sm text-blue-600 hover:text-blue-700"
+          >
+            Upload Another File
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-8 h-8 text-green-500" />
+            <div>
+              <div className="text-2xl font-bold text-green-700">{successCount}</div>
+              <div className="text-sm text-green-600">Successful</div>
+            </div>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <XCircle className="w-8 h-8 text-red-500" />
+            <div>
+              <div className="text-2xl font-bold text-red-700">{failCount}</div>
+              <div className="text-sm text-red-600">Failed</div>
+            </div>
+          </div>
+        </div>
+
+        {failCount > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h4 className="font-medium text-red-700 mb-2">Failed Rows:</h4>
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {results.filter(r => !r.success).map((r, i) => (
+                <div key={i} className="text-sm text-red-600">
+                  Row {r.row} ({r.call_number}): {r.error}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (step === 'preview') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-500" />
+            <span className="font-medium">{file?.name}</span>
+            <span className="text-sm text-gray-500">({parsedData.length} rows)</span>
+          </div>
+          <button
+            onClick={reset}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
+
+        {validationErrors.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-yellow-700 font-medium mb-2">
+              <AlertTriangle className="w-4 h-4" />
+              Validation Warnings ({validationErrors.length})
+            </div>
+            <div className="max-h-32 overflow-y-auto space-y-1">
+              {validationErrors.slice(0, 10).map((err, i) => (
+                <div key={i} className="text-sm text-yellow-600">{err}</div>
+              ))}
+              {validationErrors.length > 10 && (
+                <div className="text-sm text-yellow-600">
+                  ... and {validationErrors.length - 10} more
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="border rounded-lg overflow-hidden">
+          <div className="max-h-64 overflow-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Call #</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Type</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Priority</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Client</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Address</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {parsedData.slice(0, 20).map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-sm">{row.call_number}</td>
+                    <td className="px-3 py-2 text-sm capitalize">{row.type}</td>
+                    <td className="px-3 py-2 text-sm capitalize">{row.priority}</td>
+                    <td className="px-3 py-2 text-sm">{row.client_name}</td>
+                    <td className="px-3 py-2 text-sm truncate max-w-[200px]">{row.client_address}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {parsedData.length > 20 && (
+            <div className="bg-gray-50 px-3 py-2 text-sm text-gray-500 text-center">
+              Showing 20 of {parsedData.length} rows
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={uploadCalls}
+            disabled={uploading || validationErrors.some(e => e.includes('Missing required'))}
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {uploading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Upload {parsedData.length} Calls
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Upload Calls from CSV</h3>
+        <button
+          onClick={downloadTemplate}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          <Download className="w-4 h-4" />
+          Download Template
+        </button>
+      </div>
+
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`
+          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          ${isDragging
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+          }
+        `}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+        <p className="text-gray-600 mb-2">
+          Drag and drop your CSV file here, or click to browse
+        </p>
+        <p className="text-sm text-gray-400">
+          Supports .csv files with call data
+        </p>
+      </div>
+
+      <div className="text-sm text-gray-500">
+        <p className="font-medium mb-1">Required columns:</p>
+        <p className="text-xs">{REQUIRED_COLUMNS.join(', ')}</p>
+        <p className="font-medium mt-2 mb-1">Optional columns:</p>
+        <p className="text-xs">
+          priority, client_contact, client_phone, latitude, longitude,
+          scheduled_date, scheduled_time_window, description, client_bank, requires_photo
+        </p>
+      </div>
+    </div>
+  );
+}
