@@ -5,6 +5,48 @@ import type { Database } from '../lib/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
+// Test accounts for development/testing - bypasses Supabase auth
+const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; profile: UserProfile }> = {
+  'admin@uds.com': {
+    password: 'admin123',
+    user: {
+      id: 'test-admin-uuid-0001',
+      email: 'admin@uds.com',
+      role: 'authenticated',
+      aud: 'authenticated',
+    } as Partial<User>,
+    profile: {
+      id: 'test-admin-uuid-0001',
+      email: 'admin@uds.com',
+      full_name: 'Test Admin',
+      phone: '+1234567890',
+      role: 'admin',
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as UserProfile,
+  },
+  'engineer@uds.com': {
+    password: 'engineer123',
+    user: {
+      id: 'test-engineer-uuid-0002',
+      email: 'engineer@uds.com',
+      role: 'authenticated',
+      aud: 'authenticated',
+    } as Partial<User>,
+    profile: {
+      id: 'test-engineer-uuid-0002',
+      email: 'engineer@uds.com',
+      full_name: 'Test Engineer',
+      phone: '+1234567891',
+      role: 'engineer',
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as UserProfile,
+  },
+};
+
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
@@ -29,6 +71,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for stored test user first
+    const storedTestUser = localStorage.getItem('test_user');
+    if (storedTestUser) {
+      try {
+        const testAccount = JSON.parse(storedTestUser);
+        console.log('Restoring test user session:', testAccount.user.email);
+        setUser(testAccount.user as User);
+        setProfile(testAccount.profile);
+        setSession({ user: testAccount.user } as Session);
+        setLoading(false);
+        return; // Don't check Supabase session if test user exists
+      } catch (e) {
+        console.error('Failed to parse stored test user:', e);
+        localStorage.removeItem('test_user');
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -40,6 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Don't override test user session
+      if (localStorage.getItem('test_user')) {
+        return;
+      }
       (() => {
         setSession(session);
         setUser(session?.user ?? null);
@@ -106,6 +169,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string, rememberMe: boolean = false) => {
+    // Check for test accounts first
+    const testAccount = TEST_ACCOUNTS[email.toLowerCase()];
+    if (testAccount && testAccount.password === password) {
+      console.log('Using test account:', email);
+      // Store test session in localStorage for persistence
+      localStorage.setItem('test_user', JSON.stringify(testAccount));
+      setUser(testAccount.user as User);
+      setProfile(testAccount.profile);
+      setSession({ user: testAccount.user } as Session);
+      setLoading(false);
+      return;
+    }
+
+    // If test account credentials don't match, try Supabase
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -142,9 +219,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear test user if present
+    localStorage.removeItem('test_user');
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setUser(null);
     setProfile(null);
+    setSession(null);
   };
 
   const reloadProfile = async () => {
