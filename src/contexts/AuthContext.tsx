@@ -119,6 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadProfile = async (userId: string) => {
+    // Skip loading for test accounts - profile is already set from localStorage
+    if (localStorage.getItem('test_user')) {
+      console.log('Skipping profile load for test account');
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log('Loading profile for user:', userId);
 
@@ -230,6 +237,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const reloadProfile = async () => {
+    // Skip reload for test accounts - profile is already set
+    if (localStorage.getItem('test_user')) {
+      return;
+    }
     if (user) {
       await loadProfile(user.id);
     }
