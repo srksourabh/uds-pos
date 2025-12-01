@@ -9,11 +9,13 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Map
 } from 'lucide-react';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
 import { DeviceDistributionChart } from '../components/charts/DeviceDistributionChart';
 import { PriorityPieChart } from '../components/charts/PriorityPieChart';
+import { AdminMap } from '../components/maps/AdminMap';
 
 interface DashboardStats {
   totalDevices: number;
@@ -25,6 +27,31 @@ interface DashboardStats {
   pendingCalls: number;
   completedToday: number;
   totalEngineers: number;
+}
+
+interface MapEngineer {
+  id: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  active_calls: number;
+  status: string;
+  phone?: string;
+  last_updated?: string;
+}
+
+interface MapCall {
+  id: string;
+  call_number: string;
+  type: string;
+  status: string;
+  priority: string;
+  client_name: string;
+  client_address: string;
+  latitude: number | null;
+  longitude: number | null;
+  assigned_engineer?: string;
+  scheduled_date?: string;
 }
 
 export function Dashboard() {
@@ -45,10 +72,14 @@ export function Dashboard() {
   const [deviceDistData, setDeviceDistData] = useState<any[]>([]);
   const [priorityData, setPriorityData] = useState<any[]>([]);
   const [chartsLoading, setChartsLoading] = useState(true);
+  const [mapEngineers, setMapEngineers] = useState<MapEngineer[]>([]);
+  const [mapCalls, setMapCalls] = useState<MapCall[]>([]);
+  const [showMap, setShowMap] = useState(true);
 
   useEffect(() => {
     loadDashboardStats();
     loadChartData();
+    loadMapData();
 
     const devicesChannel = supabase
       .channel('dashboard-devices')
@@ -63,12 +94,21 @@ export function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, () => {
         loadDashboardStats();
         loadChartData();
+        loadMapData();
+      })
+      .subscribe();
+
+    const engineersChannel = supabase
+      .channel('dashboard-engineers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => {
+        loadMapData();
       })
       .subscribe();
 
     return () => {
       devicesChannel.unsubscribe();
       callsChannel.unsubscribe();
+      engineersChannel.unsubscribe();
     };
   }, []);
 
@@ -171,6 +211,63 @@ export function Dashboard() {
       console.error('Error loading chart data:', error);
     } finally {
       setChartsLoading(false);
+    }
+  };
+
+  const loadMapData = async () => {
+    try {
+      // Load engineers with location data
+      const { data: engineers } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, latitude, longitude, phone, is_active, last_location_updated_at')
+        .eq('role', 'engineer');
+
+      // Load active calls with location data
+      const { data: calls } = await supabase
+        .from('calls')
+        .select('id, call_number, type, status, priority, client_name, client_address, latitude, longitude, assigned_engineer, scheduled_date')
+        .in('status', ['pending', 'assigned', 'in_progress']);
+
+      // Count active calls per engineer
+      const engineerCallCounts = new Map<string, number>();
+      (calls || []).forEach(call => {
+        if (call.assigned_engineer) {
+          engineerCallCounts.set(
+            call.assigned_engineer,
+            (engineerCallCounts.get(call.assigned_engineer) || 0) + 1
+          );
+        }
+      });
+
+      const mappedEngineers: MapEngineer[] = (engineers || []).map(eng => ({
+        id: eng.user_id,
+        name: eng.full_name || 'Unknown',
+        latitude: eng.latitude,
+        longitude: eng.longitude,
+        active_calls: engineerCallCounts.get(eng.user_id) || 0,
+        status: eng.is_active ? (engineerCallCounts.get(eng.user_id) ? 'busy' : 'active') : 'offline',
+        phone: eng.phone,
+        last_updated: eng.last_location_updated_at,
+      }));
+
+      const mappedCalls: MapCall[] = (calls || []).map(call => ({
+        id: call.id,
+        call_number: call.call_number,
+        type: call.type,
+        status: call.status,
+        priority: call.priority,
+        client_name: call.client_name,
+        client_address: call.client_address,
+        latitude: call.latitude,
+        longitude: call.longitude,
+        assigned_engineer: call.assigned_engineer,
+        scheduled_date: call.scheduled_date,
+      }));
+
+      setMapEngineers(mappedEngineers);
+      setMapCalls(mappedCalls);
+    } catch (error) {
+      console.error('Error loading map data:', error);
     }
   };
 
@@ -283,6 +380,35 @@ export function Dashboard() {
           );
         })}
       </div>
+
+      {/* Live Map Section */}
+      {isAdmin && (
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Map className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-semibold text-gray-900">Live Map</h2>
+              <span className="text-sm text-gray-500">
+                ({mapEngineers.filter(e => e.latitude).length} engineers, {mapCalls.filter(c => c.latitude).length} calls)
+              </span>
+            </div>
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              {showMap ? 'Hide Map' : 'Show Map'}
+            </button>
+          </div>
+          {showMap && (
+            <AdminMap
+              engineers={mapEngineers}
+              calls={mapCalls}
+              height="450px"
+              showClustering={true}
+            />
+          )}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

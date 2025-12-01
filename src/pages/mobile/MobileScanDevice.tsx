@@ -1,13 +1,22 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, QrCode, Keyboard, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, QrCode, Keyboard, CheckCircle2, XCircle, AlertTriangle, Camera, Sparkles, Loader2 } from 'lucide-react';
+import { useSerialOCR, useOCRStatus } from '../../lib/ocr-hooks';
+import { generateSerialNumber } from '../../lib/ocr';
+
+type ScanMode = 'qr' | 'ocr' | 'manual';
 
 export default function MobileScanDevice() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [serialNumber, setSerialNumber] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [scanMode, setScanMode] = useState<ScanMode>('qr');
+  const [ocrConfidence, setOcrConfidence] = useState<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isConfigured: isOCRConfigured } = useOCRStatus();
+  const { extractSerial, loading: ocrLoading, error: ocrError, result: ocrResult } = useSerialOCR();
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
@@ -15,6 +24,29 @@ export default function MobileScanDevice() {
     error_code?: string;
   } | null>(null);
   const [action, setAction] = useState<'install' | 'swap_in' | 'swap_out' | 'remove' | 'inspect'>('install');
+
+  const handleOCRCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await extractSerial(file);
+    if (result?.success && result.serial_number) {
+      setSerialNumber(result.serial_number);
+      setOcrConfidence(result.confidence);
+      setScanMode('ocr');
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAutoGenerate = () => {
+    const generated = generateSerialNumber('POS');
+    setSerialNumber(generated);
+    setOcrConfidence(1);
+    setScanMode('manual');
+  };
 
   const handleValidateDevice = async () => {
     if (!serialNumber.trim() || !id) {
@@ -117,28 +149,127 @@ export default function MobileScanDevice() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Scan or Enter Serial Number</h2>
             <p className="text-sm text-gray-600">
-              In a real mobile app, the camera would open here for QR scanning
+              Use QR code scanner, OCR from photo, or enter manually
             </p>
           </div>
+
+          {/* Scan Mode Tabs */}
+          <div className="flex border-b border-gray-200 mb-4">
+            <button
+              onClick={() => setScanMode('qr')}
+              className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                scanMode === 'qr'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <QrCode className="w-4 h-4 mx-auto mb-1" />
+              QR Code
+            </button>
+            <button
+              onClick={() => setScanMode('ocr')}
+              className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                scanMode === 'ocr'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+              disabled={!isOCRConfigured}
+            >
+              <Camera className="w-4 h-4 mx-auto mb-1" />
+              OCR Photo
+            </button>
+            <button
+              onClick={() => setScanMode('manual')}
+              className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                scanMode === 'manual'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Keyboard className="w-4 h-4 mx-auto mb-1" />
+              Manual
+            </button>
+          </div>
+
+          {/* OCR Section */}
+          {scanMode === 'ocr' && (
+            <div className="mb-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleOCRCapture}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={ocrLoading}
+                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {ocrLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                    <span className="text-gray-600">Extracting serial number...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 text-gray-400" />
+                    <span className="text-gray-600">Take Photo of Serial Label</span>
+                  </>
+                )}
+              </button>
+              {ocrError && (
+                <p className="text-sm text-red-600 mt-2">{ocrError}</p>
+              )}
+              {ocrResult?.raw_text && (
+                <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-500">
+                  <span className="font-medium">Detected text:</span> {ocrResult.raw_text.slice(0, 100)}...
+                </div>
+              )}
+              {!isOCRConfigured && (
+                <p className="text-sm text-yellow-600 mt-2">
+                  OCR requires Gemini API key configuration
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Device Serial Number
+                {ocrConfidence > 0 && scanMode === 'ocr' && (
+                  <span className="ml-2 text-xs text-green-600">
+                    (OCR confidence: {Math.round(ocrConfidence * 100)}%)
+                  </span>
+                )}
               </label>
               <input
                 type="text"
                 value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setSerialNumber(e.target.value.toUpperCase());
+                  setScanMode('manual');
+                }}
                 placeholder="Enter serial number"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono"
-                disabled={scanning}
+                disabled={scanning || ocrLoading}
               />
             </div>
 
+            {/* Auto-generate button */}
+            <button
+              onClick={handleAutoGenerate}
+              className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1"
+            >
+              <Sparkles className="w-4 h-4" />
+              Auto-generate Serial Number
+            </button>
+
             <button
               onClick={handleValidateDevice}
-              disabled={scanning || !serialNumber.trim()}
+              disabled={scanning || !serialNumber.trim() || ocrLoading}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {scanning ? 'Validating...' : 'Validate Device'}
