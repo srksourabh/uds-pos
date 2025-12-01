@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('role')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (profile?.role !== 'admin') {
@@ -164,12 +164,12 @@ Deno.serve(async (req: Request) => {
 
       if (deviceAction.action === 'install') {
         newStatus = 'installed';
-        installedAt = call.installation_address;
+        installedAt = call.client_address;
         await supabase
           .from('devices')
           .update({
             status: 'installed',
-            installed_at_client: call.installation_address,
+            installed_at_client: call.client_address,
             assigned_to: null,
           })
           .eq('id', deviceAction.device_id);
@@ -180,19 +180,19 @@ Deno.serve(async (req: Request) => {
           from_status: device.status,
           to_status: 'installed',
           from_location: 'engineer',
-          to_location: call.installation_address,
+          to_location: call.client_address,
           performed_by: user.id,
-          related_call: call_id,
+          call_id: call_id,
           notes: deviceAction.notes,
         });
       } else if (deviceAction.action === 'swap_in') {
         newStatus = 'installed';
-        installedAt = call.installation_address;
+        installedAt = call.client_address;
         await supabase
           .from('devices')
           .update({
             status: 'installed',
-            installed_at_client: call.installation_address,
+            installed_at_client: call.client_address,
             assigned_to: null,
           })
           .eq('id', deviceAction.device_id);
@@ -203,9 +203,9 @@ Deno.serve(async (req: Request) => {
           from_status: device.status,
           to_status: 'installed',
           from_location: 'engineer',
-          to_location: call.installation_address,
+          to_location: call.client_address,
           performed_by: user.id,
-          related_call: call_id,
+          call_id: call_id,
           notes: deviceAction.notes,
         });
       }
