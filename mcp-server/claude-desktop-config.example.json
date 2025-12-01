@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "uds-pos": {
+      "command": "node",
+      "args": ["/path/to/uds-pos/mcp-server/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_SERVICE_KEY": "your-service-role-key"
+      }
+    }
+  }
+}

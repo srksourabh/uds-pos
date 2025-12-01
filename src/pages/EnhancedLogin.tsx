@@ -26,7 +26,7 @@ export function EnhancedLogin() {
   const [loading, setLoading] = useState(false);
 
   if (user && !isPending) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (isPending) {
@@ -42,7 +42,7 @@ export function EnhancedLogin() {
       await signIn(email, password, rememberMe);
       await reloadProfile();
       await new Promise(resolve => setTimeout(resolve, 500));
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       if (err.message?.includes('Invalid')) {
         setError('Invalid email or password. Please try again.');

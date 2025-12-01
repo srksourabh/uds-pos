@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (profile?.role !== 'admin') {
@@ -81,8 +81,8 @@ Deno.serve(async (req: Request) => {
 
     const { data: engineer, error: engineerError } = await supabase
       .from('user_profiles')
-      .select('*, banks(bank_code, bank_name)')
-      .eq('user_id', engineerId)
+      .select('*, banks!user_profiles_bank_id_fkey(code, name)')
+      .eq('id', engineerId)
       .eq('role', 'engineer')
       .single();
 
@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Engineer not found', 'ENGINEER_NOT_FOUND', 404);
     }
 
-    if (!engineer.is_active) {
+    if (!engineer.active || engineer.status !== 'active') {
       return errorResponse('Engineer is not active', 'ENGINEER_NOT_ACTIVE', 400);
     }
 
@@ -172,9 +172,9 @@ Deno.serve(async (req: Request) => {
       errors,
       issuedDeviceIds: successfulIds,
       engineer: {
-        id: engineer.user_id,
+        id: engineer.id,
         name: engineer.full_name,
-        bank: engineer.banks?.bank_code,
+        bank: engineer.banks?.code,
         new_stock_count: updatedAgg?.current_device_count || successfulIds.length,
       },
       stock_movements_created: movements.length,

@@ -11,7 +11,7 @@ export function PendingApproval() {
     if (!loading && !profile) {
       navigate('/login');
     } else if (!loading && isActive) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [loading, profile, isActive, navigate]);
 

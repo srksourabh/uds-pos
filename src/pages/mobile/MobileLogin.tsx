@@ -33,7 +33,7 @@ export default function MobileLogin() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 shadow-lg">
             <Smartphone className="w-10 h-10 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">CoSTAR Field</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">UDS Service</h1>
           <p className="text-blue-100">Engineer Mobile Portal</p>
         </div>
 
@@ -96,14 +96,18 @@ export default function MobileLogin() {
             <p className="text-sm text-gray-600">
               Having trouble logging in?
             </p>
-            <a href="#" className="text-sm text-blue-600 hover:text-blue-800 font-medium mt-1 inline-block">
+            <button
+              type="button"
+              onClick={() => window.location.href = 'mailto:support@udsservice.com'}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium mt-1 inline-block"
+            >
               Contact your administrator
-            </a>
+            </button>
           </div>
         </div>
 
         <div className="mt-6 text-center text-blue-100 text-sm">
-          <p>© 2025 CoSTAR Field Service</p>
+          <p>© 2025 UDS Service</p>
           <p className="mt-1">Version 1.0.0</p>
         </div>
       </div>
