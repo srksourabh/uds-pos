@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role, bank_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (!profile || (profile.role !== 'admin' && profile.role !== 'engineer')) {
@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse(`Call with ID ${call_id} not found`, 'CALL_NOT_FOUND', 404);
     }
 
-    if (call.call_type !== 'swap') {
+    if (call.type !== 'swap') {
       return errorResponse('This operation requires a swap-type call', 'INVALID_CALL_TYPE', 400);
     }
 
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
       .from('devices')
       .update({
         status: 'installed',
-        installed_at_client: call.installation_address,
+        installed_at_client: call.client_address,
         assigned_to: null,
       })
       .eq('id', new_device_id);
@@ -160,10 +160,10 @@ Deno.serve(async (req: Request) => {
           movement_type: 'swap_out',
           from_status: 'installed',
           to_status: oldDevice.fault_description ? 'faulty' : 'returned',
-          from_location: call.installation_address,
+          from_location: call.client_address,
           to_location: oldDevice.fault_description ? 'faulty_stock' : 'engineer',
           performed_by: user.id,
-          related_call: call_id,
+          call_id: call_id,
           notes: swap_reason,
         },
         {
@@ -172,9 +172,9 @@ Deno.serve(async (req: Request) => {
           from_status: 'issued',
           to_status: 'installed',
           from_location: 'engineer',
-          to_location: call.installation_address,
+          to_location: call.client_address,
           performed_by: user.id,
-          related_call: call_id,
+          call_id: call_id,
           notes: swap_reason,
         },
       ]);
@@ -207,7 +207,7 @@ Deno.serve(async (req: Request) => {
           device_id: newDevice.id,
           serial_number: newDevice.serial_number,
           new_status: 'installed',
-          installed_at: call.installation_address,
+          installed_at: call.client_address,
         },
         stock_movements_created: 2,
       },
