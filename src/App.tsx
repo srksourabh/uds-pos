@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { LandingPage } from './pages/LandingPage';
 import { EnhancedLogin } from './pages/EnhancedLogin';
 import { ProfileSetup } from './pages/ProfileSetup';
 import { PendingApproval } from './pages/PendingApproval';
@@ -32,22 +33,17 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* Public Landing Page */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Auth Routes */}
           <Route path="/login" element={<EnhancedLogin />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
 
+          {/* Protected Dashboard */}
           <Route
             path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
             element={
               <ProtectedRoute>
                 <Layout>
@@ -235,6 +231,7 @@ function App() {
             }
           />
 
+          {/* Catch-all redirect to landing page */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
