@@ -1,6 +1,8 @@
 import { ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
+import { MODULES } from '../lib/permissions';
 import {
   LayoutDashboard,
   Smartphone,
@@ -16,7 +18,8 @@ import {
   PackagePlus,
   Truck,
   Warehouse,
-  FileText
+  FileText,
+  Shield
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,24 +28,41 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { profile, signOut } = useAuth();
+  const { hasAccess, isSuperAdmin, isAdmin } = usePermissions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Calls', href: '/calls', icon: ClipboardList },
-    { name: 'Devices', href: '/devices', icon: Smartphone },
-    { name: 'Stock', href: '/stock', icon: Warehouse },
-    { name: 'Alerts', href: '/alerts', icon: Bell },
-    { name: 'Receive Stock', href: '/receive-stock', icon: PackagePlus },
-    { name: 'In Transit', href: '/in-transit', icon: Truck },
-    { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft },
-    ...(profile?.role === 'admin' ? [
-      { name: 'Engineers', href: '/engineers', icon: Users },
-      { name: 'Banks', href: '/banks', icon: Building2 },
-      { name: 'Approvals', href: '/approvals', icon: UserCheck },
-      { name: 'Reports', href: '/reports', icon: FileText }
-    ] : []),
+  // Define all navigation items with their required modules
+  const allNavItems = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, module: MODULES.DASHBOARD },
+    { name: 'Calls', href: '/calls', icon: ClipboardList, module: MODULES.CALLS },
+    { name: 'Devices', href: '/devices', icon: Smartphone, module: MODULES.DEVICES },
+    { name: 'Stock', href: '/stock', icon: Warehouse, module: MODULES.STOCK },
+    { name: 'Alerts', href: '/alerts', icon: Bell, module: MODULES.ALERTS },
+    { name: 'Receive Stock', href: '/receive-stock', icon: PackagePlus, module: MODULES.RECEIVE_STOCK },
+    { name: 'In Transit', href: '/in-transit', icon: Truck, module: MODULES.IN_TRANSIT },
+    { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft, module: MODULES.STOCK_MOVEMENTS },
+    { name: 'Engineers', href: '/engineers', icon: Users, module: MODULES.ENGINEERS, adminOnly: true },
+    { name: 'Banks', href: '/banks', icon: Building2, module: MODULES.BANKS, adminOnly: true },
+    { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
+    { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
   ];
+
+  // Filter navigation based on permissions
+  const navigation = allNavItems.filter(item => {
+    // Super admin sees everything
+    if (isSuperAdmin) return true;
+
+    // Admin-only items require admin role plus module access
+    if (item.adminOnly && !isAdmin) return false;
+
+    // Check module-level access
+    return hasAccess(item.module);
+  });
+
+  // Add User Management for super_admin and admin
+  if (isSuperAdmin || isAdmin) {
+    navigation.push({ name: 'User Management', href: '/users', icon: Shield, module: 'user_management', adminOnly: true });
+  }
 
   const handleSignOut = async () => {
     try {
@@ -72,7 +92,7 @@ export function Layout({ children }: LayoutProps) {
                     <NavLink
                       key={item.name}
                       to={item.href}
-                      end={item.href === '/'}
+                      end={item.href === '/dashboard'}
                       className={({ isActive }) =>
                         `inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition ${
                           isActive
@@ -130,7 +150,7 @@ export function Layout({ children }: LayoutProps) {
                   <NavLink
                     key={item.name}
                     to={item.href}
-                    end={item.href === '/'}
+                    end={item.href === '/dashboard'}
                     onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3 text-base font-medium ${
