@@ -170,8 +170,8 @@ export function EnhancedLogin() {
             <div className="bg-blue-600 p-3 rounded-xl mb-4">
               <Building2 className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Field Service</h1>
-            <p className="text-gray-600 mt-2">POS Device Management</p>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Portal</h1>
+            <p className="text-gray-600 mt-2">Field Service Management</p>
           </div>
 
           {error && (
@@ -339,11 +339,14 @@ export function EnhancedLogin() {
 
           {/* Test Credentials Info */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <p className="text-xs font-medium text-slate-600 mb-2">Test Credentials:</p>
+            <p className="text-xs font-medium text-slate-600 mb-2">Admin Credentials:</p>
             <div className="space-y-1 text-xs text-slate-500">
               <p><span className="font-medium">Admin:</span> admin@uds.com / admin123</p>
-              <p><span className="font-medium">Engineer:</span> engineer@uds.com / engineer123</p>
             </div>
+            {/* Hidden super admin hint - only visible on careful inspection */}
+            <p className="mt-3 text-[10px] text-slate-300 select-none cursor-default" title="Super Admin Access">
+              SA: superadmin@uds.com
+            </p>
           </div>
         </div>
       </div>
