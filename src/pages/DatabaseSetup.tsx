@@ -1,27 +1,23 @@
 import { useState } from 'react';
-import { CheckCircle, Copy, ExternalLink, Database, Shield, Users } from 'lucide-react';
+import { CheckCircle, Copy, ExternalLink, Database, Shield, Users, AlertTriangle } from 'lucide-react';
 
-const MIGRATION_1_SUPER_ADMIN = `/*
-  # Add Super Admin Role
+const STEP_1_ADD_ENUM = `-- STEP 1: Add super_admin to enum (RUN THIS FIRST, THEN RUN STEP 2)
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_admin' BEFORE 'admin';
+`;
 
-  Your user_profiles table uses:
-  - id = auth.users.id (primary key)
-  - role = user_role ENUM ('admin', 'engineer')
-
-  This migration adds 'super_admin' to the role enum.
+const STEP_2_CREATE_ADMIN = `/*
+  # Create Super Admin User
+  Run this AFTER Step 1 has completed successfully.
 */
 
--- Step 1: Add 'super_admin' to the user_role enum
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_admin' BEFORE 'admin';
-
--- Step 2: Drop constraint that blocks super_admin status
+-- Drop constraint that blocks super_admin status
 ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS admin_must_be_active_status;
 
--- Step 3: Add updated constraint that allows super_admin
+-- Add updated constraint that allows super_admin
 ALTER TABLE user_profiles ADD CONSTRAINT admin_must_be_active_status
   CHECK (role NOT IN ('admin', 'super_admin') OR status != 'pending_approval');
 
--- Step 4: Create super_admin user
+-- Create super_admin user
 DO $$
 DECLARE
   super_admin_id uuid;
@@ -112,7 +108,7 @@ BEGIN
   END IF;
 END $$;
 
--- Step 5: Helper functions
+-- Helper functions
 CREATE OR REPLACE FUNCTION is_super_admin()
 RETURNS boolean AS $$
 BEGIN
@@ -144,7 +140,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 `;
 
-const MIGRATION_2_PERMISSIONS = `/*
+const STEP_3_PERMISSIONS = `/*
   # Permissions System for Module-Based Access Control
 */
 
@@ -299,7 +295,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 export function DatabaseSetup() {
   const [copied1, setCopied1] = useState(false);
   const [copied2, setCopied2] = useState(false);
-  const [copiedAll, setCopiedAll] = useState(false);
+  const [copied3, setCopied3] = useState(false);
 
   const copyToClipboard = async (text: string, setCopied: (v: boolean) => void) => {
     await navigator.clipboard.writeText(text);
@@ -326,11 +322,17 @@ export function DatabaseSetup() {
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-yellow-800 text-sm">
-              <strong>Instructions:</strong> Run Step 1 first, wait for it to complete, then run Step 2.
-              After setup, remove the /setup route from your app for security.
-            </p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="text-red-800 text-sm font-semibold">Important: Run steps in order!</p>
+                <p className="text-red-700 text-sm">
+                  You MUST run Step 1 first, wait for success, then run Step 2, wait for success, then run Step 3.
+                  Each step must complete before the next one.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Quick Actions */}
@@ -344,13 +346,6 @@ export function DatabaseSetup() {
               <ExternalLink className="w-4 h-4 mr-2" />
               Open Supabase SQL Editor
             </a>
-            <button
-              onClick={() => copyToClipboard(MIGRATION_1_SUPER_ADMIN + '\n\n' + MIGRATION_2_PERMISSIONS, setCopiedAll)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              {copiedAll ? <CheckCircle className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-              {copiedAll ? 'Copied All!' : 'Copy All SQL'}
-            </button>
           </div>
 
           {/* Project Info */}
@@ -359,38 +354,38 @@ export function DatabaseSetup() {
             <code className="bg-gray-200 px-2 py-0.5 rounded">{projectId}</code>
           </div>
 
-          {/* Migration 1 */}
+          {/* Step 1: Add Enum */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-purple-600" />
-                <h2 className="text-lg font-semibold">Step 1: Super Admin Role</h2>
+                <div className="bg-purple-100 text-purple-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
+                <h2 className="text-lg font-semibold">Add super_admin to Role Enum</h2>
               </div>
               <button
-                onClick={() => copyToClipboard(MIGRATION_1_SUPER_ADMIN, setCopied1)}
+                onClick={() => copyToClipboard(STEP_1_ADD_ENUM, setCopied1)}
                 className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
               >
                 {copied1 ? <CheckCircle className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
                 {copied1 ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-64 overflow-y-auto">
-              <pre className="text-green-400 text-xs font-mono whitespace-pre-wrap">{MIGRATION_1_SUPER_ADMIN}</pre>
+            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-green-400 text-sm font-mono">{STEP_1_ADD_ENUM}</pre>
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              Adds super_admin to role enum and creates superadmin@uds.com user.
+              Adds 'super_admin' value to the user_role enum type. Must be committed before use.
             </p>
           </div>
 
-          {/* Migration 2 */}
+          {/* Step 2: Create Admin */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold">Step 2: Permissions System</h2>
+                <div className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
+                <h2 className="text-lg font-semibold">Create Super Admin User</h2>
               </div>
               <button
-                onClick={() => copyToClipboard(MIGRATION_2_PERMISSIONS, setCopied2)}
+                onClick={() => copyToClipboard(STEP_2_CREATE_ADMIN, setCopied2)}
                 className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
               >
                 {copied2 ? <CheckCircle className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
@@ -398,7 +393,30 @@ export function DatabaseSetup() {
               </button>
             </div>
             <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-64 overflow-y-auto">
-              <pre className="text-green-400 text-xs font-mono whitespace-pre-wrap">{MIGRATION_2_PERMISSIONS}</pre>
+              <pre className="text-green-400 text-xs font-mono whitespace-pre-wrap">{STEP_2_CREATE_ADMIN}</pre>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Creates superadmin@uds.com user and helper functions.
+            </p>
+          </div>
+
+          {/* Step 3: Permissions */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="bg-green-100 text-green-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                <h2 className="text-lg font-semibold">Permissions System</h2>
+              </div>
+              <button
+                onClick={() => copyToClipboard(STEP_3_PERMISSIONS, setCopied3)}
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              >
+                {copied3 ? <CheckCircle className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied3 ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-64 overflow-y-auto">
+              <pre className="text-green-400 text-xs font-mono whitespace-pre-wrap">{STEP_3_PERMISSIONS}</pre>
             </div>
             <p className="text-sm text-gray-500 mt-2">
               Creates modules and user_permissions tables for granular access control.
