@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -10,7 +11,10 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle,
-  Map
+  Map,
+  Shield,
+  Settings,
+  ArrowRight
 } from 'lucide-react';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
 import { DeviceDistributionChart } from '../components/charts/DeviceDistributionChart';
@@ -55,7 +59,8 @@ interface MapCall {
 }
 
 export function Dashboard() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, isSuperAdmin } = useAuth();
+  const isEngineer = profile?.role === 'engineer';
   const [stats, setStats] = useState<DashboardStats>({
     totalDevices: 0,
     warehouseDevices: 0,
@@ -348,16 +353,115 @@ export function Dashboard() {
     });
   }
 
+  // Role-based welcome message
+  const getRoleLabel = () => {
+    if (isSuperAdmin) return 'Super Administrator';
+    if (isAdmin) return 'Administrator';
+    return 'Field Engineer';
+  };
+
+  const getRoleDescription = () => {
+    if (isSuperAdmin) return 'Full system access - Manage users, permissions, and all operations';
+    if (isAdmin) return 'Manage field operations, engineers, and service calls';
+    return 'View your assigned calls and track your daily tasks';
+  };
+
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {profile?.full_name}
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Here's an overview of your field service operations
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {profile?.full_name}
+          </h1>
+          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+            isSuperAdmin ? 'bg-purple-100 text-purple-700' :
+            isAdmin ? 'bg-blue-100 text-blue-700' :
+            'bg-green-100 text-green-700'
+          }`}>
+            {getRoleLabel()}
+          </span>
+        </div>
+        <p className="text-gray-600">
+          {getRoleDescription()}
         </p>
       </div>
+
+      {/* Super Admin Quick Actions */}
+      {isSuperAdmin && (
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link
+            to="/users"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 text-white hover:from-purple-700 hover:to-purple-800 transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <Shield className="w-8 h-8 mb-2" />
+                <h3 className="font-semibold text-lg">User Management</h3>
+                <p className="text-purple-200 text-sm">Manage users & permissions</p>
+              </div>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+          <Link
+            to="/engineers"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white hover:from-blue-700 hover:to-blue-800 transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <Users className="w-8 h-8 mb-2" />
+                <h3 className="font-semibold text-lg">Engineers</h3>
+                <p className="text-blue-200 text-sm">View all field engineers</p>
+              </div>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+          <Link
+            to="/reports"
+            className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 text-white hover:from-green-700 hover:to-green-800 transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <Settings className="w-8 h-8 mb-2" />
+                <h3 className="font-semibold text-lg">Reports</h3>
+                <p className="text-green-200 text-sm">Analytics & reports</p>
+              </div>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* Engineer Quick Actions */}
+      {isEngineer && (
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            to="/calls"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white hover:from-blue-700 hover:to-blue-800 transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <ClipboardList className="w-8 h-8 mb-2" />
+                <h3 className="font-semibold text-lg">My Calls</h3>
+                <p className="text-blue-200 text-sm">View your assigned service calls</p>
+              </div>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+          <Link
+            to="/stock"
+            className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 text-white hover:from-green-700 hover:to-green-800 transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <Package className="w-8 h-8 mb-2" />
+                <h3 className="font-semibold text-lg">My Inventory</h3>
+                <p className="text-green-200 text-sm">Devices assigned to you</p>
+              </div>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {statCards.map((stat) => {
@@ -410,79 +514,106 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Calls Trend (Last 7 Days)</h2>
-          <CallsTrendChart data={callsTrendData} loading={chartsLoading} />
-        </div>
+      {/* Charts - Admin/Super Admin only */}
+      {isAdmin && (
+        <>
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Calls Trend (Last 7 Days)</h2>
+              <CallsTrendChart data={callsTrendData} loading={chartsLoading} />
+            </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Calls by Priority</h2>
-          <PriorityPieChart data={priorityData} loading={chartsLoading} />
-        </div>
-      </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Calls by Priority</h2>
+              <PriorityPieChart data={priorityData} loading={chartsLoading} />
+            </div>
+          </div>
 
-      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Distribution by Bank</h2>
-        <DeviceDistributionChart data={deviceDistData} loading={chartsLoading} />
-      </div>
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Distribution by Bank</h2>
+            <DeviceDistributionChart data={deviceDistData} loading={chartsLoading} />
+          </div>
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Status Overview</h2>
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Status Overview</h2>
+              <div className="space-y-4">
+                {[
+                  { label: 'Warehouse', value: stats.warehouseDevices, total: stats.totalDevices, color: 'bg-gray-500' },
+                  { label: 'Issued', value: stats.issuedDevices, total: stats.totalDevices, color: 'bg-yellow-500' },
+                  { label: 'Installed', value: stats.installedDevices, total: stats.totalDevices, color: 'bg-green-500' },
+                  { label: 'Faulty', value: stats.faultyDevices, total: stats.totalDevices, color: 'bg-red-500' },
+                ].map((item) => {
+                  const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
+                  return (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className="font-medium text-gray-900">{item.value}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`${item.color} h-2 rounded-full transition-all duration-300`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Call Status Overview</h2>
+              <div className="space-y-4">
+                {[
+                  { label: 'Pending', value: stats.pendingCalls, total: stats.activeCalls, color: 'bg-orange-500' },
+                  { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, total: stats.activeCalls, color: 'bg-blue-500' },
+                  { label: 'Completed Today', value: stats.completedToday, total: stats.activeCalls + stats.completedToday, color: 'bg-green-500' },
+                ].map((item) => {
+                  const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
+                  return (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className="font-medium text-gray-900">{item.value}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`${item.color} h-2 rounded-full transition-all duration-300`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Engineer simplified view */}
+      {isEngineer && (
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Call Status</h2>
           <div className="space-y-4">
             {[
-              { label: 'Warehouse', value: stats.warehouseDevices, total: stats.totalDevices, color: 'bg-gray-500' },
-              { label: 'Issued', value: stats.issuedDevices, total: stats.totalDevices, color: 'bg-yellow-500' },
-              { label: 'Installed', value: stats.installedDevices, total: stats.totalDevices, color: 'bg-green-500' },
-              { label: 'Faulty', value: stats.faultyDevices, total: stats.totalDevices, color: 'bg-red-500' },
-            ].map((item) => {
-              const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
-              return (
-                <div key={item.label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">{item.label}</span>
-                    <span className="font-medium text-gray-900">{item.value}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`${item.color} h-2 rounded-full transition-all duration-300`}
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
+              { label: 'Pending Calls', value: stats.pendingCalls, color: 'bg-orange-500' },
+              { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, color: 'bg-blue-500' },
+              { label: 'Completed Today', value: stats.completedToday, color: 'bg-green-500' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                  <span className="text-gray-700">{item.label}</span>
                 </div>
-              );
-            })}
+                <span className="text-2xl font-bold text-gray-900">{item.value}</span>
+              </div>
+            ))}
           </div>
         </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Call Status Overview</h2>
-          <div className="space-y-4">
-            {[
-              { label: 'Pending', value: stats.pendingCalls, total: stats.activeCalls, color: 'bg-orange-500' },
-              { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, total: stats.activeCalls, color: 'bg-blue-500' },
-              { label: 'Completed Today', value: stats.completedToday, total: stats.activeCalls + stats.completedToday, color: 'bg-green-500' },
-            ].map((item) => {
-              const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
-              return (
-                <div key={item.label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">{item.label}</span>
-                    <span className="font-medium text-gray-900">{item.value}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`${item.color} h-2 rounded-full transition-all duration-300`}
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

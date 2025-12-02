@@ -57,6 +57,7 @@ interface AuthContextType {
   verifyOTP: (phone: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   reloadProfile: () => Promise<void>;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isActive: boolean;
   isPending: boolean;
@@ -256,7 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verifyOTP,
     signOut,
     reloadProfile,
-    isAdmin: profile?.role === 'admin',
+    isSuperAdmin: profile?.role === 'super_admin',
+    isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin',
     isActive: profile?.status === 'active',
     isPending: profile?.status === 'pending_approval',
   };
