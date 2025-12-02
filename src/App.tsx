@@ -21,6 +21,7 @@ import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
 import { UserManagement } from './pages/UserManagement';
+import { DatabaseSetup } from './pages/DatabaseSetup';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -43,6 +44,9 @@ function App() {
           <Route path="/login" element={<EnhancedLogin />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
+
+          {/* Temporary Database Setup (remove after setup) */}
+          <Route path="/setup" element={<DatabaseSetup />} />
 
           {/* Protected Dashboard */}
           <Route
