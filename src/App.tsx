@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { PermissionsProvider } from './contexts/PermissionsContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { LandingPage } from './pages/LandingPage';
@@ -19,6 +20,7 @@ import { Alerts } from './pages/Alerts';
 import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
+import { UserManagement } from './pages/UserManagement';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -32,6 +34,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PermissionsProvider>
         <Routes>
           {/* Public Landing Page */}
           <Route path="/" element={<LandingPage />} />
@@ -172,6 +175,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <UserManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/mobile/calls"
@@ -234,6 +247,7 @@ function App() {
           {/* Catch-all redirect to landing page */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </PermissionsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

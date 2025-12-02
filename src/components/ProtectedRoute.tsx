@@ -33,8 +33,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && profile?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  if (requireAdmin && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
