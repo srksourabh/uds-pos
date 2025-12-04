@@ -21,10 +21,12 @@ export function Login() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      // Auto-append @test.com if no @ symbol (for easy testing)
+      const loginEmail = email.includes('@') ? email : `${email}@test.com`;
+      await signIn(loginEmail, password);
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Invalid username or password');
     } finally {
       setLoading(false);
     }
@@ -52,16 +54,16 @@ export function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Username / Email
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                placeholder="admin@example.com"
+                placeholder="admin"
               />
             </div>
 
@@ -90,8 +92,9 @@ export function Login() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center">
-              Demo credentials will be provided by your administrator
+            <p className="text-xs text-gray-500 text-center">
+              <strong>Test Accounts:</strong> superadmin / admin / engineer<br />
+              (Use the same word for password)
             </p>
           </div>
         </div>
