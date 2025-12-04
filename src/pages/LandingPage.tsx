@@ -105,18 +105,18 @@ export function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/login"
-              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105"
+              to="/mobile/login"
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-500 hover:from-blue-500 hover:via-cyan-400 hover:to-teal-400 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 shadow-lg shadow-blue-500/50"
             >
-              Admin Dashboard
+              <Smartphone className="w-5 h-5" />
+              FSE Login
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              to="/mobile/login"
-              className="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all"
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all border border-slate-600 hover:border-slate-500"
             >
-              <Smartphone className="w-5 h-5" />
-              Engineer Mobile App
+              Admin Dashboard
             </Link>
           </div>
         </div>
