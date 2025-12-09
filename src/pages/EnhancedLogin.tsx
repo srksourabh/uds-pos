@@ -63,12 +63,21 @@ export function EnhancedLogin() {
       await new Promise(resolve => setTimeout(resolve, 500));
       navigate('/dashboard');
     } catch (err: any) {
-      if (err.message?.includes('Invalid')) {
-        setError('Invalid email or password. Please try again.');
-      } else if (err.message?.includes('locked')) {
-        setError('Your account has been locked for security. Contact support.');
+      console.error('[Login Error]', err);
+      const message = err.message?.toLowerCase() || '';
+
+      if (message.includes('invalid login credentials') || message.includes('invalid')) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (message.includes('email not confirmed')) {
+        setError('Please confirm your email address before logging in.');
+      } else if (message.includes('locked') || message.includes('too many')) {
+        setError('Too many login attempts. Please wait a few minutes.');
+      } else if (message.includes('network') || message.includes('fetch')) {
+        setError('Network error. Please check your internet connection.');
+      } else if (message.includes('supabase') || message.includes('environment')) {
+        setError('Configuration error. Please contact support.');
       } else {
-        setError('An error occurred. Please try again.');
+        setError(err.message || 'An error occurred. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -185,16 +194,16 @@ export function EnhancedLogin() {
             <form onSubmit={handleEmailSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Email or Username
                 </label>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  placeholder="admin@example.com"
+                  placeholder="admin or admin@example.com"
                 />
               </div>
 
@@ -339,13 +348,14 @@ export function EnhancedLogin() {
 
           {/* Test Credentials Info */}
           <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <p className="text-xs font-medium text-slate-600 mb-2">Admin Credentials:</p>
+            <p className="text-xs font-medium text-slate-600 mb-2">Test Credentials (Dev Mode):</p>
             <div className="space-y-1 text-xs text-slate-500">
-              <p><span className="font-medium">Admin:</span> admin@uds.com / admin123</p>
+              <p><span className="font-medium">Admin:</span> admin / admin</p>
+              <p><span className="font-medium">Engineer:</span> test / test</p>
+              <p><span className="font-medium">Super Admin:</span> super / super</p>
             </div>
-            {/* Hidden super admin hint - only visible on careful inspection */}
-            <p className="mt-3 text-[10px] text-slate-300 select-none cursor-default" title="Super Admin Access">
-              SA: superadmin@uds.com
+            <p className="mt-2 text-[10px] text-slate-400">
+              Or use Supabase accounts: admin@uds.com / Admin@123
             </p>
           </div>
         </div>

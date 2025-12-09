@@ -68,7 +68,7 @@ interface DashboardData {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-// Helper function to call edge functions
+// Helper function to call edge functions with improved error handling
 async function callEdgeFunction<T>(
   functionName: string,
   payload?: Record<string, unknown>,
@@ -77,7 +77,7 @@ async function callEdgeFunction<T>(
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    throw new Error('Not authenticated');
+    throw { error: 'Not authenticated', error_code: 'AUTH_REQUIRED' } as ApiError;
   }
 
   const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
@@ -95,14 +95,66 @@ async function callEdgeFunction<T>(
     options.body = JSON.stringify(payload);
   }
 
-  const response = await fetch(url, options);
-  const data = await response.json();
+  try {
+    const response = await fetch(url, options);
 
-  if (!response.ok) {
-    throw data as ApiError;
+    // Handle specific HTTP status codes
+    if (response.status === 501) {
+      throw {
+        error: `Edge function '${functionName}' not deployed. Please deploy edge functions first.`,
+        error_code: 'FUNCTION_NOT_DEPLOYED',
+      } as ApiError;
+    }
+
+    if (response.status === 404) {
+      throw {
+        error: `Edge function '${functionName}' not found.`,
+        error_code: 'FUNCTION_NOT_FOUND',
+      } as ApiError;
+    }
+
+    // Try to parse JSON response
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      // Response wasn't JSON
+      if (!response.ok) {
+        throw {
+          error: `Edge function returned status ${response.status}`,
+          error_code: 'FUNCTION_ERROR',
+        } as ApiError;
+      }
+      return {} as T;
+    }
+
+    if (!response.ok) {
+      throw {
+        error: data?.error || data?.message || `Request failed with status ${response.status}`,
+        error_code: data?.error_code || 'REQUEST_FAILED',
+        details: data,
+      } as ApiError;
+    }
+
+    return data;
+  } catch (err) {
+    // Network errors
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw {
+        error: 'Network error. Please check your internet connection.',
+        error_code: 'NETWORK_ERROR',
+      } as ApiError;
+    }
+    // Re-throw ApiError
+    if ((err as ApiError).error_code) {
+      throw err;
+    }
+    // Unknown error
+    throw {
+      error: err instanceof Error ? err.message : 'Unknown error',
+      error_code: 'UNKNOWN_ERROR',
+    } as ApiError;
   }
-
-  return data;
 }
 
 // ============================================
