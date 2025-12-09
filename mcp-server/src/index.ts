@@ -17,6 +17,19 @@ interface ToolArguments {
   [key: string]: unknown;
 }
 
+/**
+ * Sanitize search input to prevent query injection attacks
+ */
+function sanitizeSearchInput(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[%*]/g, '')
+    .replace(/[()]/g, '')
+    .replace(/\./g, ' ')
+    .trim()
+    .slice(0, 100);
+}
+
 // Initialize Supabase client
 function getSupabaseClient(): SupabaseClient {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -699,11 +712,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const query = args.query as string;
         if (!query) throw new Error("query is required");
 
+        const sanitizedQuery = sanitizeSearchInput(query);
+        if (!sanitizedQuery) throw new Error("Invalid search query");
+
         const limit = typeof args.limit === "number" ? args.limit : 20;
         const { data, error } = await supabase
           .from("devices")
           .select("*")
-          .or(`serial_number.ilike.%${query}%,model.ilike.%${query}%`)
+          .or(`serial_number.ilike.%${sanitizedQuery}%,model.ilike.%${sanitizedQuery}%`)
           .limit(limit);
 
         if (error) throw error;

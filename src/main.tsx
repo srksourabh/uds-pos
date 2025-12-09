@@ -18,7 +18,7 @@ createRoot(document.getElementById('root')!).render(
               We've been notified and are working to fix this issue.
             </p>
             <pre className="bg-gray-100 p-2 rounded text-xs text-left overflow-auto mb-4">
-              {error?.message || 'Unknown error'}
+              {(error as Error)?.message || 'Unknown error'}
             </pre>
             <button
               onClick={() => window.location.reload()}

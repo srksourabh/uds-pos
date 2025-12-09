@@ -1,34 +1,37 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the environment variable
-const mockEnv = {
-  VITE_N8N_WEBHOOK_BASE_URL: 'https://n8n.example.com/webhook',
-};
+// We need to mock the environment variable BEFORE importing the module
+vi.stubEnv('VITE_N8N_WEBHOOK_BASE_URL', 'https://n8n.example.com/webhook');
 
-vi.mock('./webhooks', async () => {
-  const originalModule = await vi.importActual('./webhooks');
-  return {
-    ...originalModule,
-    isWebhookConfigured: () => true,
-  };
-});
-
-import {
+// Import after stubbing env
+const webhookModule = await import('./webhooks');
+const {
   triggerCallStatusUpdate,
   triggerDailyEngineerSummary,
   triggerStockAlert,
   triggerBatchWebhooks,
-} from './webhooks';
+  isWebhookConfigured,
+} = webhookModule;
 
 describe('Webhook Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (global.fetch as any) = vi.fn();
+    global.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('isWebhookConfigured', () => {
+    it('should return true when env is configured', () => {
+      expect(isWebhookConfigured()).toBe(true);
+    });
   });
 
   describe('triggerCallStatusUpdate', () => {
     it('should send call status update webhook', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -44,10 +47,17 @@ describe('Webhook Service', () => {
       });
 
       expect(result.success).toBe(true);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://n8n.example.com/webhook/call-status-update',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
     });
 
     it('should handle webhook failure gracefully', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -69,7 +79,7 @@ describe('Webhook Service', () => {
 
   describe('triggerDailyEngineerSummary', () => {
     it('should send daily summary webhook', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -92,7 +102,7 @@ describe('Webhook Service', () => {
 
   describe('triggerStockAlert', () => {
     it('should send stock alert webhook', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -112,10 +122,10 @@ describe('Webhook Service', () => {
 
   describe('triggerBatchWebhooks', () => {
     it('should handle batch webhooks', async () => {
-      (global.fetch as any)
+      (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
-        .mockResolvedValueOnce({ ok: false, status: 500 });
+        .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Error' });
 
       const result = await triggerBatchWebhooks([
         { endpoint: 'test-1', eventType: 'event_1', data: { foo: 'bar' } },

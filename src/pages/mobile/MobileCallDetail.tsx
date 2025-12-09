@@ -4,9 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   ArrowLeft,
-  MapPin,
   Phone,
-  Clock,
   Navigation,
   Play,
   Camera,
@@ -14,9 +12,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   User,
-  Calendar,
   FileText,
-  Image as ImageIcon
 } from 'lucide-react';
 
 interface Call {
@@ -53,7 +49,7 @@ export default function MobileCallDetail() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
 

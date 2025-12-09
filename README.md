@@ -1,152 +1,338 @@
-# Field Service Platform - POS Device Management
+# UDS-POS - Field Service & POS Device Management Platform
 
 A comprehensive field service and inventory management platform for POS devices, built with React, TypeScript, and Supabase.
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ecf8e.svg)](https://supabase.com/)
+[![Tests](https://img.shields.io/badge/Tests-79%20passing-brightgreen.svg)](#testing)
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [API Reference](#api-reference)
+- [Security](#security)
+- [Contributing](#contributing)
+
 ## Features
 
-### Current Implementation (MVP)
+### Core Functionality
 
-- **Authentication & Authorization**
-  - Secure login with email/password
-  - Role-based access control (Admin, Engineer)
-  - Session management with Supabase Auth
+- **Dashboard** - Real-time KPIs, device statistics, and call metrics with live updates
+- **Device Management** - Full lifecycle tracking from warehouse to installation
+- **Call Management** - Service call creation, assignment, and completion workflow
+- **Engineer Management** - Profile management, skill tracking, and workload visibility
+- **Stock Movements** - Inventory transfers between warehouses, engineers, and clients
+- **Bank Management** - Multi-tenant bank/client organization support
 
-- **Dashboard**
-  - Real-time KPIs showing device and call statistics
-  - Live updates using Supabase Realtime
-  - Visual charts for device and call status distribution
+### User Roles
 
-- **Device Management**
-  - Complete device inventory tracking
-  - Device status lifecycle: warehouse → issued → installed → faulty → returned
-  - Bank-level device ownership
-  - Search and filter capabilities
-  - Automatic audit trail for all device movements
+| Role | Access Level |
+|------|--------------|
+| Super Admin | Full system access, user management, all banks |
+| Admin | Bank-level management, engineer oversight |
+| Engineer | Assigned calls, device operations, mobile access |
+| Warehouse | Stock management, receive/issue devices |
+| Courier | In-transit shipment management |
 
-- **Call Management**
-  - Field service call tracking (install, swap, deinstall, maintenance, breakdown)
-  - Call assignment to engineers
-  - Priority levels and status tracking
-  - Client and location information
-  - Real-time call updates
+### Advanced Features
 
-- **Engineer Management (Admin Only)**
-  - Engineer profile management
-  - Bank assignments
-  - Contact information tracking
-
-- **Security Features**
-  - Row Level Security (RLS) on all database tables
-  - Bank-device matching validation
-  - Role-based data access
-  - Automatic audit logging via database triggers
+- **Module-Based Permissions** - Granular access control per feature
+- **OCR Integration** - Automatic device serial number scanning
+- **Photo Documentation** - Before/after photos for installations
+- **Webhook Integration** - n8n workflow automation support
+- **Error Monitoring** - Sentry integration for production monitoring
+- **Real-time Updates** - Live data sync via Supabase Realtime
 
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, TailwindCSS
-- **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions)
-- **Routing**: React Router v7
-- **Icons**: Lucide React
-- **Database**: PostgreSQL with Row Level Security
+| Category | Technology |
+|----------|------------|
+| Frontend | React 18, TypeScript 5, Vite |
+| Styling | TailwindCSS, Lucide Icons |
+| State | React Query, Context API |
+| Backend | Supabase (PostgreSQL, Auth, Realtime, Storage) |
+| Functions | Supabase Edge Functions (Deno) |
+| Testing | Vitest, Testing Library |
+| Monitoring | Sentry |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- Node.js 18+ and npm
+- Supabase account (for backend services)
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
+```bash
+# Clone the repository
+git clone <repository-url>
+cd uds-pos
+
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env
+
+# Configure environment variables (see below)
+
+# Start development server
+npm run dev
+```
+
+### Development Commands
+
+```bash
+npm run dev          # Start dev server (http://localhost:5173)
+npm run build        # Production build
+npm run preview      # Preview production build
+npm run typecheck    # TypeScript validation
+npm run lint         # ESLint check
+npm run test         # Run tests in watch mode
+npm run test:run     # Run tests once
+npm run test:coverage # Run tests with coverage report
+```
+
+## Project Structure
+
+```
+uds-pos/
+├── src/
+│   ├── components/     # Reusable UI components
+│   │   ├── ui/        # Base UI components (Button, Input, etc.)
+│   │   ├── Layout.tsx # Main app layout with navigation
+│   │   └── ...        # Feature-specific components
+│   ├── contexts/      # React Context providers
+│   │   ├── AuthContext.tsx       # Authentication state
+│   │   └── PermissionsContext.tsx # Permission checking
+│   ├── lib/           # Utilities and services
+│   │   ├── supabase.ts      # Supabase client
+│   │   ├── database.types.ts # Generated DB types
+│   │   ├── permissions.ts   # Permission helpers
+│   │   ├── webhooks.ts      # Webhook integration
+│   │   └── sentry.ts        # Error monitoring
+│   ├── pages/         # Page components (routes)
+│   └── App.tsx        # Root component with routing
+├── supabase/
+│   ├── functions/     # Edge Functions
+│   │   ├── _shared/   # Shared utilities
+│   │   └── ...        # Individual functions
+│   └── migrations/    # Database migrations
+├── mcp-server/        # MCP server for AI integrations
+└── public/            # Static assets
+```
+
+## Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```env
+# Required - Supabase Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Optional - Monitoring
+VITE_SENTRY_DSN=your-sentry-dsn
+
+# Optional - Webhook Integration
+VITE_N8N_WEBHOOK_BASE_URL=https://your-n8n-instance.com/webhook
+
+# Development Only
+VITE_ENABLE_TEST_ACCOUNTS=true  # Never enable in production
+```
+
+## Testing
+
+The project includes 79+ unit tests covering:
+
+- Permission module functions
+- OCR text extraction
+- Call assignment algorithms
+- Webhook integrations
+- Utility functions
+
+```bash
+# Run all tests
+npm run test:run
+
+# Run with coverage
+npm run test:coverage
+
+# Watch mode for development
+npm run test
+```
+
+## Deployment
+
+### Production Build
+
+```bash
+# Build the application
+npm run build
+
+# The build output is in the 'dist' directory
+```
+
+### Deployment Options
+
+1. **Vercel** (Recommended)
+   - Connect your Git repository
+   - Set environment variables in Vercel dashboard
+   - Automatic deployments on push
+
+2. **Netlify**
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+
+3. **Docker**
+   ```dockerfile
+   FROM node:18-alpine AS builder
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm ci
+   COPY . .
+   RUN npm run build
+
+   FROM nginx:alpine
+   COPY --from=builder /app/dist /usr/share/nginx/html
+   EXPOSE 80
    ```
 
-3. The Supabase project is already configured in `.env`
+### Supabase Configuration
 
-4. Start the development server:
+1. Create a new Supabase project
+2. Run database migrations from `supabase/migrations/`
+3. Deploy Edge Functions:
    ```bash
-   npm run dev
+   supabase functions deploy
    ```
+4. Configure RLS policies (included in migrations)
+5. Set up storage buckets for photos
 
-### Default Credentials
+## API Reference
 
-- **Email**: admin@fieldservice.com
-- **Password**: admin123
+### Supabase Edge Functions
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/create-admin` | POST | Create admin user |
+| `/assign-calls` | POST | Assign calls to engineers |
+| `/scan-device` | POST | Scan device barcode |
+| `/upload-photo` | POST | Upload call photos |
+| `/submit-call-completion` | POST | Complete a call |
+| `/mark-device-faulty` | POST | Mark device as faulty |
+| `/swap-device` | POST | Swap device during call |
+| `/transfer-device` | POST | Transfer device ownership |
+
+### Database Tables
+
+| Table | Description |
+|-------|-------------|
+| `user_profiles` | User accounts and roles |
+| `banks` | Bank/client organizations |
+| `devices` | POS device inventory |
+| `calls` | Field service calls |
+| `call_devices` | Call-device junction |
+| `inventory_movements` | Device movement audit |
+| `user_permissions` | Per-module permissions |
+| `modules` | System modules |
+| `photos` | Call documentation photos |
+| `stock_alerts` | Inventory alerts |
+
+## Security
+
+### Best Practices Implemented
+
+- **Row Level Security (RLS)** - All tables protected with RLS policies
+- **Role-Based Access Control** - Module-level permissions
+- **Input Sanitization** - Search queries sanitized to prevent injection
+- **CORS Configuration** - Environment-based origin whitelisting
+- **Test Account Protection** - Disabled in production builds
+- **Error Monitoring** - Sentry integration for production
+
+### Security Checklist for Production
+
+- [ ] Set `VITE_ENABLE_TEST_ACCOUNTS` to `false` or remove
+- [ ] Configure `ALLOWED_ORIGINS` in Edge Functions
+- [ ] Enable Supabase RLS on all tables
+- [ ] Review and restrict API key permissions
+- [ ] Set up Sentry for error monitoring
+- [ ] Configure SSL/HTTPS
+- [ ] Implement rate limiting
 
 ## Database Schema
 
 ### Core Tables
 
-1. **banks** - Bank organizations that own devices
-2. **user_profiles** - User accounts (Admin, Engineer)
-3. **devices** - POS device inventory
-4. **calls** - Field service calls
-5. **call_devices** - Junction table linking calls to devices
-6. **inventory_movements** - Audit trail for device movements
-7. **call_history** - Audit trail for call status changes
-8. **notifications** - User notifications
+```sql
+-- Users with roles
+CREATE TABLE user_profiles (
+  id UUID PRIMARY KEY,
+  email TEXT UNIQUE,
+  role TEXT CHECK (role IN ('super_admin', 'admin', 'engineer', 'warehouse', 'courier')),
+  ...
+);
 
-### Key Business Rules
+-- Devices with status tracking
+CREATE TABLE devices (
+  id UUID PRIMARY KEY,
+  serial_number TEXT UNIQUE,
+  status TEXT CHECK (status IN ('warehouse', 'issued', 'installed', 'faulty', 'returned')),
+  bank_id UUID REFERENCES banks(id),
+  ...
+);
 
-- **Bank Matching**: Devices can only be assigned to calls from the same bank
-- **Automatic Audit**: All device status changes and call status changes are automatically logged
-- **Role-Based Access**:
-  - Admins see all data across all banks
-  - Engineers see only their assigned calls and devices
-
-## Architecture Decisions
-
-### Why Supabase?
-
-- **Unified Backend**: Eliminates need for separate auth server, API server, and database
-- **Row Level Security**: Database-level security enforcement
-- **Realtime**: Built-in WebSocket support for live updates
-- **Edge Functions**: Serverless functions for custom logic
-- **Scalability**: Production-ready PostgreSQL database
-
-### Real-time Updates
-
-The application uses Supabase Realtime to automatically update the UI when data changes:
-- Dashboard KPIs update live when devices or calls change
-- Device list reflects real-time status updates
-- Call board shows live assignment changes
-
-## Development Commands
-
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-npm run typecheck    # Run TypeScript type checking
+-- Service calls
+CREATE TABLE calls (
+  id UUID PRIMARY KEY,
+  call_number TEXT UNIQUE,
+  type TEXT CHECK (type IN ('install', 'swap', 'deinstall', 'maintenance', 'breakdown')),
+  status TEXT CHECK (status IN ('pending', 'assigned', 'in_progress', 'completed', 'cancelled')),
+  ...
+);
 ```
 
-## Future Enhancements (V1 & V2)
+## MCP Server
 
-### Phase V1
-- Mobile engineer app (React Native/Expo)
-- Photo uploads for device condition
-- Barcode/QR scanning
-- Location tracking and routing
-- Offline support
+The project includes an MCP (Model Context Protocol) server for AI integrations:
 
-### Phase V2
-- Advanced reporting and analytics
-- SMS/email notifications
-- Workflow automation
-- Multi-tenancy enhancements
-- External API integrations
+```bash
+cd mcp-server
+npm install
+npm run build
 
-## Security Notes
+# Configure in your MCP client
+```
 
-- All database operations enforce RLS policies
-- Service role key should never be exposed to client
-- User sessions are managed securely by Supabase Auth
-- Bank-device validation happens at database constraint level
+Available tools:
+- `list_calls` - Query service calls
+- `list_devices` - Query device inventory
+- `search_devices` - Search by serial/model
+- `get_engineer_workload` - Check engineer assignments
+- `get_dashboard_summary` - Get KPIs
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`npm run test:run`)
+4. Run type check (`npm run typecheck`)
+5. Commit changes (`git commit -m 'Add amazing feature'`)
+6. Push to branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## License
 
 Proprietary - All rights reserved
+
+---
+
+Built with React, TypeScript, and Supabase

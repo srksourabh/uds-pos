@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
+import type { UserRole } from '../lib/database.types';
 import {
   Users,
   UserPlus,
@@ -9,8 +10,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Search,
-  X,
-  Check,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -24,12 +23,12 @@ import {
 
 interface User {
   id: string;
-  user_id: string;
   email: string;
   full_name: string;
   role: string;
   phone: string | null;
-  is_active: boolean;
+  active: boolean;
+  status: string;
   created_at: string;
 }
 
@@ -49,14 +48,14 @@ interface UserPermission {
 }
 
 export function UserManagement() {
-  const { profile } = useAuth();
+  useAuth(); // For authentication check
   const { isSuperAdmin, isAdmin } = usePermissions();
   const [users, setUsers] = useState<User[]>([]);
   const [modules, setModules] = useState<ModuleInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [_showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userPermissions, setUserPermissions] = useState<Map<string, UserPermission>>(new Map());
   const [savingPermissions, setSavingPermissions] = useState(false);
@@ -108,14 +107,14 @@ export function UserManagement() {
 
   const toggleUserExpanded = async (user: User) => {
     const newExpanded = new Set(expandedUsers);
-    if (newExpanded.has(user.user_id)) {
-      newExpanded.delete(user.user_id);
+    if (newExpanded.has(user.id)) {
+      newExpanded.delete(user.id);
       setSelectedUser(null);
     } else {
       newExpanded.clear(); // Only one expanded at a time
-      newExpanded.add(user.user_id);
+      newExpanded.add(user.id);
       setSelectedUser(user);
-      await loadUserPermissions(user.user_id);
+      await loadUserPermissions(user.id);
     }
     setExpandedUsers(newExpanded);
   };
@@ -153,9 +152,9 @@ export function UserManagement() {
     setSavingPermissions(true);
     try {
       if (!newPerm.can_view) {
-        await revokeModulePermission(selectedUser.user_id, moduleName);
+        await revokeModulePermission(selectedUser.id, moduleName);
       } else {
-        await grantModulePermission(selectedUser.user_id, moduleName, {
+        await grantModulePermission(selectedUser.id, moduleName, {
           can_view: newPerm.can_view,
           can_create: newPerm.can_create,
           can_edit: newPerm.can_edit,
@@ -165,7 +164,7 @@ export function UserManagement() {
     } catch (error) {
       console.error('Error saving permission:', error);
       // Revert on error
-      await loadUserPermissions(selectedUser.user_id);
+      await loadUserPermissions(selectedUser.id);
     } finally {
       setSavingPermissions(false);
     }
@@ -175,8 +174,8 @@ export function UserManagement() {
     if (!selectedUser) return;
     setSavingPermissions(true);
     try {
-      await grantAllPermissions(selectedUser.user_id);
-      await loadUserPermissions(selectedUser.user_id);
+      await grantAllPermissions(selectedUser.id);
+      await loadUserPermissions(selectedUser.id);
     } catch (error) {
       console.error('Error granting all permissions:', error);
     } finally {
@@ -184,7 +183,7 @@ export function UserManagement() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     // Only super_admin can change roles
     if (!isSuperAdmin) return;
 
@@ -198,7 +197,7 @@ export function UserManagement() {
       const { error } = await supabase
         .from('user_profiles')
         .update({ role: newRole })
-        .eq('user_id', userId);
+        .eq('id', userId);
 
       if (error) throw error;
       loadUsers();
@@ -305,7 +304,7 @@ export function UserManagement() {
       <div className="space-y-4">
         {filteredUsers.map((user) => {
           const RoleIcon = roleIcons[user.role] || Users;
-          const isExpanded = expandedUsers.has(user.user_id);
+          const isExpanded = expandedUsers.has(user.id);
           const canManagePermissions = isSuperAdmin && user.role === 'admin';
 
           return (
@@ -331,15 +330,15 @@ export function UserManagement() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${roleColors[user.role]}`}>
                       {user.role.replace('_', ' ')}
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                    <span className={`px-2 py-1 rounded text-xs ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {user.active ? 'Active' : 'Inactive'}
                     </span>
                     {isSuperAdmin && user.role !== 'super_admin' && (
                       <select
                         value={user.role}
                         onChange={(e) => {
                           e.stopPropagation();
-                          handleRoleChange(user.user_id, e.target.value);
+                          handleRoleChange(user.id, e.target.value as UserRole);
                         }}
                         onClick={(e) => e.stopPropagation()}
                         className="text-sm border border-gray-300 rounded px-2 py-1"

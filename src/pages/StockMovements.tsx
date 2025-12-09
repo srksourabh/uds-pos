@@ -54,7 +54,7 @@ export function StockMovements() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setMovements(data as StockMovement[]);
+      setMovements((data ?? []) as unknown as StockMovement[]);
     } catch (error) {
       console.error('Error loading stock movements:', error);
     } finally {

@@ -45,6 +45,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Banks', href: '/banks', icon: Building2, module: MODULES.BANKS, adminOnly: true },
     { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
+    { name: 'User Management', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
   ];
 
   // Filter navigation based on permissions
@@ -58,11 +59,6 @@ export function Layout({ children }: LayoutProps) {
     // Check module-level access
     return hasAccess(item.module);
   });
-
-  // Add User Management for super_admin and admin
-  if (isSuperAdmin || isAdmin) {
-    navigation.push({ name: 'User Management', href: '/users', icon: Shield, module: 'user_management', adminOnly: true });
-  }
 
   const handleSignOut = async () => {
     try {

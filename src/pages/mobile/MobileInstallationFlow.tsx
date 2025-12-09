@@ -18,7 +18,7 @@ export default function MobileInstallationFlow() {
   const [call, setCall] = useState<any>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const [_currentStep, _setCurrentStep] = useState(0);
 
   useEffect(() => {
     loadCallData();

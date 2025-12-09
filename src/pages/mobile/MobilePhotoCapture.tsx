@@ -45,7 +45,7 @@ export default function MobilePhotoCapture() {
       const base64Data = capturedPhoto.split(',')[1];
       const fileName = `${callId}_${photoType}_${Date.now()}.jpg`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('call-photos')
         .upload(fileName, Buffer.from(base64Data, 'base64'), {
           contentType: 'image/jpeg',

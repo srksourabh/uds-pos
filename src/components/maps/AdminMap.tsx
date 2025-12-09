@@ -139,7 +139,7 @@ function AdminMapContent({
     });
 
     if (hasPoints) {
-      map.fitBounds(bounds, { padding: 50 });
+      map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
     }
   }, [map, validEngineers, validCalls]);
 

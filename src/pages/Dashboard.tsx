@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle,
-  Map,
+  Map as MapIcon,
   Shield,
   Settings,
   ArrowRight
@@ -224,7 +224,7 @@ export function Dashboard() {
       // Load engineers with location data
       const { data: engineers } = await supabase
         .from('user_profiles')
-        .select('user_id, full_name, latitude, longitude, phone, is_active, last_location_updated_at')
+        .select('id, full_name, last_location_lat, last_location_lng, phone, active, last_location_updated_at')
         .eq('role', 'engineer');
 
       // Load active calls with location data
@@ -245,14 +245,14 @@ export function Dashboard() {
       });
 
       const mappedEngineers: MapEngineer[] = (engineers || []).map(eng => ({
-        id: eng.user_id,
+        id: eng.id,
         name: eng.full_name || 'Unknown',
-        latitude: eng.latitude,
-        longitude: eng.longitude,
-        active_calls: engineerCallCounts.get(eng.user_id) || 0,
-        status: eng.is_active ? (engineerCallCounts.get(eng.user_id) ? 'busy' : 'active') : 'offline',
-        phone: eng.phone,
-        last_updated: eng.last_location_updated_at,
+        latitude: eng.last_location_lat,
+        longitude: eng.last_location_lng,
+        active_calls: engineerCallCounts.get(eng.id) || 0,
+        status: eng.active ? (engineerCallCounts.get(eng.id) ? 'busy' : 'active') : 'offline',
+        phone: eng.phone ?? undefined,
+        last_updated: eng.last_location_updated_at ?? undefined,
       }));
 
       const mappedCalls: MapCall[] = (calls || []).map(call => ({
@@ -265,7 +265,7 @@ export function Dashboard() {
         client_address: call.client_address,
         latitude: call.latitude,
         longitude: call.longitude,
-        assigned_engineer: call.assigned_engineer,
+        assigned_engineer: call.assigned_engineer ?? undefined,
         scheduled_date: call.scheduled_date,
       }));
 
@@ -490,7 +490,7 @@ export function Dashboard() {
         <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Map className="w-5 h-5 text-blue-500" />
+              <MapIcon className="w-5 h-5 text-blue-500" />
               <h2 className="text-lg font-semibold text-gray-900">Live Map</h2>
               <span className="text-sm text-gray-500">
                 ({mapEngineers.filter(e => e.latitude).length} engineers, {mapCalls.filter(c => c.latitude).length} calls)

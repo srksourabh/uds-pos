@@ -47,7 +47,7 @@ export function initSentry() {
     ],
 
     // Set custom tags
-    beforeSend(event, hint) {
+    beforeSend(event, _hint) {
       // Filter out non-error events in production
       if (import.meta.env.PROD && event.level === 'info') {
         return null;

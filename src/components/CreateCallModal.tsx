@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from './Modal';
-import type { Database } from '../lib/database.types';
+import type { Database, CallType, Priority } from '../lib/database.types';
 
 type Bank = Database['public']['Tables']['banks']['Row'];
 
@@ -36,7 +36,7 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
       const { data, error } = await supabase
         .from('banks')
         .select('*')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
 
       if (error) throw error;
@@ -54,8 +54,15 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
       const { error } = await supabase
         .from('calls')
         .insert({
-          ...formData,
-          status: 'pending',
+          client_bank: formData.client_bank,
+          client_name: formData.client_name,
+          client_address: formData.client_address,
+          client_phone: formData.client_phone,
+          type: formData.type as CallType,
+          priority: formData.priority as Priority,
+          scheduled_date: formData.scheduled_date,
+          description: formData.description,
+          status: 'pending' as const,
           call_number: `CALL-${Date.now()}`,
         });
 

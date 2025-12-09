@@ -1,21 +1,24 @@
 import { supabase } from './supabase';
 
-export interface Module {
+export interface ModulePermission {
   module_name: string;
-  display_name: string;
-  icon: string;
-  route: string;
   can_view: boolean;
   can_create: boolean;
   can_edit: boolean;
   can_delete: boolean;
 }
 
+export interface Module {
+  id: string;
+  name: string;
+  display_name: string;
+  icon: string;
+}
+
 export interface UserPermission {
   id: string;
   user_id: string;
-  module_id: string;
-  module_name?: string;
+  module_name: string;
   can_view: boolean;
   can_create: boolean;
   can_edit: boolean;
@@ -28,6 +31,8 @@ export const MODULES = {
   DEVICES: 'devices',
   STOCK_MOVEMENTS: 'stock_movements',
   STOCK: 'stock',
+  RECEIVE_STOCK: 'receive_stock',
+  IN_TRANSIT: 'in_transit',
   ENGINEERS: 'engineers',
   BANKS: 'banks',
   REPORTS: 'reports',
@@ -43,27 +48,29 @@ export type ModuleName = typeof MODULES[keyof typeof MODULES];
 /**
  * Get modules the current user has access to
  */
-export async function getUserModules(): Promise<Module[]> {
-  const { data, error } = await supabase.rpc('get_user_modules');
+export async function getUserModules(userId: string): Promise<ModulePermission[]> {
+  const { data, error } = await supabase.rpc('get_user_modules', {
+    target_user_id: userId,
+  });
 
   if (error) {
     console.error('Error fetching user modules:', error);
     return [];
   }
 
-  return data || [];
+  return (data || []) as ModulePermission[];
 }
 
 /**
  * Check if user has access to a specific module
  */
 export async function hasModuleAccess(
-  moduleName: string,
-  permissionType: 'view' | 'create' | 'edit' | 'delete' = 'view'
+  userId: string,
+  moduleName: string
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc('has_module_access', {
+    target_user_id: userId,
     module_name: moduleName,
-    permission_type: permissionType,
   });
 
   if (error) {
@@ -71,7 +78,7 @@ export async function hasModuleAccess(
     return false;
   }
 
-  return data || false;
+  return !!data;
 }
 
 /**
@@ -140,19 +147,17 @@ export async function revokeModulePermission(
 /**
  * Get all available modules
  */
-export async function getAllModules(): Promise<{ id: string; name: string; display_name: string; icon: string }[]> {
+export async function getAllModules(): Promise<Module[]> {
   const { data, error } = await supabase
     .from('modules')
-    .select('id, name, display_name, icon')
-    .eq('is_active', true)
-    .order('sort_order');
+    .select('id, name, display_name, icon');
 
   if (error) {
     console.error('Error fetching modules:', error);
     return [];
   }
 
-  return data || [];
+  return (data || []) as Module[];
 }
 
 /**
@@ -161,16 +166,7 @@ export async function getAllModules(): Promise<{ id: string; name: string; displ
 export async function getUserPermissions(userId: string): Promise<UserPermission[]> {
   const { data, error } = await supabase
     .from('user_permissions')
-    .select(`
-      id,
-      user_id,
-      module_id,
-      can_view,
-      can_create,
-      can_edit,
-      can_delete,
-      modules(name)
-    `)
+    .select('id, user_id, module_name, can_view, can_create, can_edit, can_delete')
     .eq('user_id', userId);
 
   if (error) {
@@ -178,8 +174,5 @@ export async function getUserPermissions(userId: string): Promise<UserPermission
     return [];
   }
 
-  return (data || []).map(p => ({
-    ...p,
-    module_name: (p.modules as any)?.name,
-  }));
+  return (data || []) as UserPermission[];
 }

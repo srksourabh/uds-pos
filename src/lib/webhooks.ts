@@ -29,6 +29,7 @@ export interface CallStatusPayload {
   engineer_name?: string;
   engineer_phone?: string;
   notes?: string;
+  [key: string]: unknown;
 }
 
 export interface EngineerSummaryPayload {
@@ -44,6 +45,7 @@ export interface EngineerSummaryPayload {
     status: string;
     client_name: string;
   }[];
+  [key: string]: unknown;
 }
 
 export interface StockAlertPayload {
@@ -54,12 +56,14 @@ export interface StockAlertPayload {
   current_count?: number;
   threshold?: number;
   message: string;
+  [key: string]: unknown;
 }
 
 export interface GoogleSheetsSyncPayload {
   sheet_type: 'calls' | 'devices' | 'engineers' | 'movements';
   operation: 'sync' | 'append' | 'update';
   records: Record<string, unknown>[];
+  [key: string]: unknown;
 }
 
 /**

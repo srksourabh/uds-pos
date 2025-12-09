@@ -7,12 +7,10 @@ import {
   MapPin,
   Clock,
   AlertCircle,
-  Filter,
   Search,
   RefreshCw,
   WifiOff,
   CheckCircle2,
-  Package
 } from 'lucide-react';
 
 interface Call {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, MapPin, Clock, User, Package, Image, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Clock, User, Package, CheckCircle, AlertCircle } from 'lucide-react';
 
 export function CallDetail() {
   const { id } = useParams<{ id: string }>();

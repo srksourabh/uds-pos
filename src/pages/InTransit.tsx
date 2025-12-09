@@ -38,7 +38,7 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
       const { data, error } = await supabase
         .from('couriers')
         .select('*')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
 
       if (error) throw error;
@@ -66,9 +66,9 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
           tracking_number: formData.tracking_number,
           courier_id: formData.courier_id,
           device_ids: deviceIds,
-          source_type: formData.source_type,
-          destination_type: formData.destination_type,
-          status: 'in_transit',
+          source_type: formData.source_type as 'warehouse' | 'engineer' | 'bank',
+          destination_type: formData.destination_type as 'warehouse' | 'engineer' | 'bank' | 'client',
+          status: 'in_transit' as const,
           shipped_at: new Date().toISOString(),
           notes: formData.notes,
         });
@@ -247,7 +247,7 @@ export function InTransit() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setShipments(data as Shipment[]);
+      setShipments((data ?? []) as unknown as Shipment[]);
     } catch (error) {
       console.error('Error loading shipments:', error);
     } finally {

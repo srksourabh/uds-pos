@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Scan, Plus, Package, Building2, CheckCircle, AlertCircle } from 'lucide-react';
-import type { Database } from '../lib/database.types';
+import type { Database, DeviceStatus } from '../lib/database.types';
 
 type Bank = Database['public']['Tables']['banks']['Row'];
 
@@ -175,7 +175,7 @@ export function ReceiveStock() {
         serial_number: d.serial_number,
         model: d.model,
         device_bank: d.source_bank_id,
-        status: 'warehouse',
+        status: 'warehouse' as DeviceStatus,
         current_location: 'warehouse',
         metadata: {
           received_from: d.source_bank_name,

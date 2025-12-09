@@ -21,6 +21,7 @@ export default function MobileScanDevice() {
     success: boolean;
     message: string;
     device?: any;
+    call?: { client_bank_name?: string; client_bank_code?: string };
     error_code?: string;
   } | null>(null);
   const [action, setAction] = useState<'install' | 'swap_in' | 'swap_out' | 'remove' | 'inspect'>('install');

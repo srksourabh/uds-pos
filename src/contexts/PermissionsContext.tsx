@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { getUserModules, Module, ModuleName } from '../lib/permissions';
+import { getUserModules, ModulePermission, ModuleName } from '../lib/permissions';
 
 interface PermissionsContextType {
-  modules: Module[];
+  modules: ModulePermission[];
   loading: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
@@ -19,7 +19,7 @@ const PermissionsContext = createContext<PermissionsContextType | undefined>(und
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { profile, user } = useAuth();
-  const [modules, setModules] = useState<Module[]>([]);
+  const [modules, setModules] = useState<ModulePermission[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -34,7 +34,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const userModules = await getUserModules();
+      const userModules = await getUserModules(user.id);
       setModules(userModules);
     } catch (error) {
       console.error('Error loading permissions:', error);

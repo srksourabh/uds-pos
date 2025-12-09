@@ -5,45 +5,94 @@ import type { Database } from '../lib/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
-// Test accounts for development/testing - bypasses Supabase auth
+// Check if test accounts are enabled (development/testing only)
+// SECURITY: Test accounts are NEVER enabled in production builds, even with env variable
+const TEST_ACCOUNTS_ENABLED = !import.meta.env.PROD && (
+  import.meta.env.VITE_ENABLE_TEST_ACCOUNTS === 'true' ||
+  import.meta.env.DEV ||
+  window.location.hostname === 'localhost'
+);
+
+// Debug logging helper - only logs in development
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log('[Auth]', ...args);
+  }
+};
+
+// Create a complete test profile with all required fields
+const createTestProfile = (overrides: Partial<UserProfile>): UserProfile => ({
+  id: '',
+  email: '',
+  full_name: '',
+  phone: null,
+  role: 'engineer',
+  bank_id: null,
+  region: null,
+  skills: {},
+  status: 'active',
+  avatar_url: null,
+  last_location_lat: null,
+  last_location_lng: null,
+  last_location_updated_at: null,
+  totp_enabled: false,
+  metadata: {},
+  active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  ...overrides,
+});
+
+// Simple test accounts for easy testing
+// Login with: admin / admin  OR  test / test
 const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; profile: UserProfile }> = {
-  'admin@uds.com': {
-    password: 'admin123',
+  'admin': {
+    password: 'admin',
     user: {
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.com',
+      email: 'admin@uds.test',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
-    profile: {
+    profile: createTestProfile({
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.com',
+      email: 'admin@uds.test',
       full_name: 'Test Admin',
       phone: '+1234567890',
       role: 'admin',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as UserProfile,
+    }),
   },
-  'engineer@uds.com': {
-    password: 'engineer123',
+  'test': {
+    password: 'test',
     user: {
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.com',
+      email: 'engineer@uds.test',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
-    profile: {
+    profile: createTestProfile({
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.com',
+      email: 'engineer@uds.test',
       full_name: 'Test Engineer',
       phone: '+1234567891',
       role: 'engineer',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as UserProfile,
+    }),
+  },
+  'super': {
+    password: 'super',
+    user: {
+      id: 'test-super-uuid-0003',
+      email: 'super@uds.test',
+      role: 'authenticated',
+      aud: 'authenticated',
+    } as Partial<User>,
+    profile: createTestProfile({
+      id: 'test-super-uuid-0003',
+      email: 'super@uds.test',
+      full_name: 'Super Admin',
+      phone: '+1234567892',
+      role: 'super_admin',
+    }),
   },
 };
 
@@ -57,6 +106,7 @@ interface AuthContextType {
   verifyOTP: (phone: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   reloadProfile: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isActive: boolean;
@@ -72,20 +122,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored test user first
-    const storedTestUser = localStorage.getItem('test_user');
-    if (storedTestUser) {
-      try {
-        const testAccount = JSON.parse(storedTestUser);
-        console.log('Restoring test user session:', testAccount.user.email);
-        setUser(testAccount.user as User);
-        setProfile(testAccount.profile);
-        setSession({ user: testAccount.user } as Session);
-        setLoading(false);
-        return; // Don't check Supabase session if test user exists
-      } catch (e) {
-        console.error('Failed to parse stored test user:', e);
-        localStorage.removeItem('test_user');
+    // Check for stored test user first (only if test accounts are enabled)
+    if (TEST_ACCOUNTS_ENABLED) {
+      const storedTestUser = localStorage.getItem('test_user');
+      if (storedTestUser) {
+        try {
+          const testAccount = JSON.parse(storedTestUser);
+          debugLog('Restoring test user session:', testAccount.user.email);
+          setUser(testAccount.user as User);
+          setProfile(testAccount.profile);
+          setSession({ user: testAccount.user } as Session);
+          setLoading(false);
+          return; // Don't check Supabase session if test user exists
+        } catch (e) {
+          debugLog('Failed to parse stored test user:', e);
+          localStorage.removeItem('test_user');
+        }
       }
     }
 
@@ -101,19 +153,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       // Don't override test user session
-      if (localStorage.getItem('test_user')) {
+      if (TEST_ACCOUNTS_ENABLED && localStorage.getItem('test_user')) {
         return;
       }
-      (() => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      })();
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -121,14 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (userId: string) => {
     // Skip loading for test accounts - profile is already set from localStorage
-    if (localStorage.getItem('test_user')) {
-      console.log('Skipping profile load for test account');
+    if (TEST_ACCOUNTS_ENABLED && localStorage.getItem('test_user')) {
+      debugLog('Skipping profile load for test account');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Loading profile for user:', userId);
+      debugLog('Loading profile for user:', userId);
 
       // Try direct query first (simpler, works if RLS allows self-access)
       const { data: directData, error: directError } = await supabase
@@ -138,38 +188,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (!directError && directData) {
-        console.log('Profile loaded via direct query:', directData);
+        debugLog('Profile loaded via direct query');
         setProfile(directData);
         return;
       }
 
       // If direct query fails, try RPC function
       if (directError) {
-        console.log('Direct query failed, trying RPC:', directError.message);
+        debugLog('Direct query failed, trying RPC:', directError.message);
 
         try {
           const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_profile');
 
           if (!rpcError && rpcData) {
             const profileData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-            console.log('Profile loaded via RPC:', profileData);
+            debugLog('Profile loaded via RPC');
             setProfile(profileData || null);
             return;
           }
 
           if (rpcError) {
-            console.log('RPC also failed:', rpcError.message);
+            debugLog('RPC also failed:', rpcError.message);
           }
         } catch {
-          console.log('RPC function may not exist');
+          debugLog('RPC function may not exist');
         }
       }
 
       // No profile found - this is OK for new users
-      console.log('No profile found for user - will redirect to profile setup');
+      debugLog('No profile found for user - will redirect to profile setup');
       setProfile(null);
     } catch (error) {
-      console.error('Unexpected error loading profile:', error);
+      debugLog('Unexpected error loading profile:', error);
       setProfile(null);
     } finally {
       setLoading(false);
@@ -177,26 +227,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string, rememberMe: boolean = false) => {
-    // Check for test accounts first
-    const testAccount = TEST_ACCOUNTS[email.toLowerCase()];
-    if (testAccount && testAccount.password === password) {
-      console.log('Using test account:', email);
-      // Store test session in localStorage for persistence
-      localStorage.setItem('test_user', JSON.stringify(testAccount));
-      setUser(testAccount.user as User);
-      setProfile(testAccount.profile);
-      setSession({ user: testAccount.user } as Session);
-      setLoading(false);
-      return;
+    // Check for test accounts first (only if enabled)
+    if (TEST_ACCOUNTS_ENABLED) {
+      const testAccount = TEST_ACCOUNTS[email.toLowerCase()];
+      if (testAccount && testAccount.password === password) {
+        debugLog('Using test account:', email);
+        // Store test session in localStorage for persistence
+        localStorage.setItem('test_user', JSON.stringify(testAccount));
+        setUser(testAccount.user as User);
+        setProfile(testAccount.profile);
+        setSession({ user: testAccount.user } as Session);
+        setLoading(false);
+        return;
+      }
     }
 
-    // If test account credentials don't match, try Supabase
+    // Try Supabase authentication
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        persistSession: true,
-      }
     });
 
     if (error) throw error;
@@ -239,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const reloadProfile = async () => {
     // Skip reload for test accounts - profile is already set
-    if (localStorage.getItem('test_user')) {
+    if (TEST_ACCOUNTS_ENABLED && localStorage.getItem('test_user')) {
       return;
     }
     if (user) {
@@ -257,6 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verifyOTP,
     signOut,
     reloadProfile,
+    refreshProfile: reloadProfile, // Alias for reloadProfile
     isSuperAdmin: profile?.role === 'super_admin',
     isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin',
     isActive: profile?.status === 'active',

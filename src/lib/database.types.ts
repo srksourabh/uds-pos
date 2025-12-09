@@ -6,6 +6,16 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Role type used across the application
+export type UserRole = 'admin' | 'engineer' | 'super_admin'
+
+// Status types
+export type UserStatus = 'pending_approval' | 'active' | 'suspended' | 'inactive'
+export type DeviceStatus = 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned' | 'in_transit'
+export type CallStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+export type CallType = 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
+export type Priority = 'low' | 'medium' | 'high' | 'urgent'
+
 export type Database = {
   public: {
     Tables: {
@@ -14,6 +24,9 @@ export type Database = {
           id: string
           name: string
           code: string
+          // Aliases for compatibility
+          bank_name?: string
+          bank_code?: string
           active: boolean
           contact_person: string | null
           contact_email: string | null
@@ -46,6 +59,7 @@ export type Database = {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -53,11 +67,11 @@ export type Database = {
           email: string
           full_name: string
           phone: string | null
-          role: 'admin' | 'engineer'
+          role: UserRole
           bank_id: string | null
           region: string | null
           skills: Json
-          status: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          status: UserStatus
           avatar_url: string | null
           last_location_lat: number | null
           last_location_lng: number | null
@@ -73,11 +87,11 @@ export type Database = {
           email: string
           full_name: string
           phone?: string | null
-          role?: 'admin' | 'engineer'
+          role?: UserRole
           bank_id?: string | null
           region?: string | null
           skills?: Json
-          status?: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          status?: UserStatus
           avatar_url?: string | null
           last_location_lat?: number | null
           last_location_lng?: number | null
@@ -93,11 +107,11 @@ export type Database = {
           email?: string
           full_name?: string
           phone?: string | null
-          role?: 'admin' | 'engineer'
+          role?: UserRole
           bank_id?: string | null
           region?: string | null
           skills?: Json
-          status?: 'pending_approval' | 'active' | 'suspended' | 'inactive'
+          status?: UserStatus
           avatar_url?: string | null
           last_location_lat?: number | null
           last_location_lng?: number | null
@@ -108,38 +122,62 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_bank_id_fkey"
+            columns: ["bank_id"]
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       photos: {
         Row: {
           id: string
-          device_id: string
+          device_id: string | null
           call_id: string | null
-          uploaded_by: string
-          photo_type: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
-          storage_path: string
+          related_call: string | null
+          related_device: string | null
+          uploaded_by: string | null
+          photo_type: string
+          photo_url: string | null
+          storage_path: string | null
           caption: string | null
+          notes: string | null
+          metadata: Json
           created_at: string
         }
         Insert: {
           id?: string
-          device_id: string
+          device_id?: string | null
           call_id?: string | null
-          uploaded_by: string
-          photo_type: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
-          storage_path: string
+          related_call?: string | null
+          related_device?: string | null
+          uploaded_by?: string | null
+          photo_type: string
+          photo_url?: string | null
+          storage_path?: string | null
           caption?: string | null
+          notes?: string | null
+          metadata?: Json
           created_at?: string
         }
         Update: {
           id?: string
-          device_id?: string
+          device_id?: string | null
           call_id?: string | null
-          uploaded_by?: string
-          photo_type?: 'before' | 'after' | 'damage' | 'serial_number' | 'installation'
-          storage_path?: string
+          related_call?: string | null
+          related_device?: string | null
+          uploaded_by?: string | null
+          photo_type?: string
+          photo_url?: string | null
+          storage_path?: string | null
           caption?: string | null
+          notes?: string | null
+          metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
       devices: {
         Row: {
@@ -147,7 +185,8 @@ export type Database = {
           serial_number: string
           model: string
           device_bank: string
-          status: 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned'
+          status: DeviceStatus
+          current_location: string | null
           assigned_to: string | null
           installed_at_client: string | null
           installation_date: string | null
@@ -165,7 +204,8 @@ export type Database = {
           serial_number: string
           model: string
           device_bank: string
-          status?: 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned'
+          status?: DeviceStatus
+          current_location?: string | null
           assigned_to?: string | null
           installed_at_client?: string | null
           installation_date?: string | null
@@ -183,7 +223,8 @@ export type Database = {
           serial_number?: string
           model?: string
           device_bank?: string
-          status?: 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned'
+          status?: DeviceStatus
+          current_location?: string | null
           assigned_to?: string | null
           installed_at_client?: string | null
           installation_date?: string | null
@@ -196,13 +237,27 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "devices_device_bank_fkey"
+            columns: ["device_bank"]
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_assigned_to_fkey"
+            columns: ["assigned_to"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       calls: {
         Row: {
           id: string
           call_number: string
-          type: 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
-          status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+          type: CallType
+          status: CallStatus
           client_bank: string
           client_name: string
           client_contact: string | null
@@ -215,7 +270,7 @@ export type Database = {
           assigned_engineer: string | null
           started_at: string | null
           completed_at: string | null
-          priority: 'low' | 'medium' | 'high' | 'urgent'
+          priority: Priority
           description: string
           resolution_notes: string | null
           estimated_duration_minutes: number | null
@@ -228,8 +283,8 @@ export type Database = {
         Insert: {
           id?: string
           call_number: string
-          type: 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
-          status?: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+          type: CallType
+          status?: CallStatus
           client_bank: string
           client_name: string
           client_contact?: string | null
@@ -237,12 +292,12 @@ export type Database = {
           client_address: string
           latitude?: number | null
           longitude?: number | null
-          scheduled_date: string
+          scheduled_date?: string | null
           scheduled_time_window?: string | null
           assigned_engineer?: string | null
           started_at?: string | null
           completed_at?: string | null
-          priority?: 'low' | 'medium' | 'high' | 'urgent'
+          priority?: Priority
           description?: string
           resolution_notes?: string | null
           estimated_duration_minutes?: number | null
@@ -255,8 +310,8 @@ export type Database = {
         Update: {
           id?: string
           call_number?: string
-          type?: 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
-          status?: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+          type?: CallType
+          status?: CallStatus
           client_bank?: string
           client_name?: string
           client_contact?: string | null
@@ -269,7 +324,7 @@ export type Database = {
           assigned_engineer?: string | null
           started_at?: string | null
           completed_at?: string | null
-          priority?: 'low' | 'medium' | 'high' | 'urgent'
+          priority?: Priority
           description?: string
           resolution_notes?: string | null
           estimated_duration_minutes?: number | null
@@ -279,6 +334,20 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "calls_client_bank_fkey"
+            columns: ["client_bank"]
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_assigned_engineer_fkey"
+            columns: ["assigned_engineer"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       call_devices: {
         Row: {
@@ -302,6 +371,7 @@ export type Database = {
           action?: string
           created_at?: string
         }
+        Relationships: []
       }
       inventory_movements: {
         Row: {
@@ -343,6 +413,7 @@ export type Database = {
           notes?: string
           created_at?: string
         }
+        Relationships: []
       }
       call_history: {
         Row: {
@@ -372,6 +443,7 @@ export type Database = {
           notes?: string
           created_at?: string
         }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -404,6 +476,7 @@ export type Database = {
           link?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       stock_movements: {
         Row: {
@@ -460,6 +533,7 @@ export type Database = {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
       engineer_aggregates: {
         Row: {
@@ -543,6 +617,7 @@ export type Database = {
           last_calculated_at?: string
           created_at?: string
         }
+        Relationships: []
       }
       stock_alerts: {
         Row: {
@@ -617,7 +692,429 @@ export type Database = {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          id: string
+          user_id: string
+          module_name: string
+          can_view: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_delete: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          module_name: string
+          can_view?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          module_name?: string
+          can_view?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          id: string
+          name: string
+          code: string
+          address: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          bank_id: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code: string
+          address?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          bank_id?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string
+          address?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          bank_id?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      couriers: {
+        Row: {
+          id: string
+          name: string
+          code: string
+          contact_phone: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code: string
+          contact_phone?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string
+          contact_phone?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      shipments: {
+        Row: {
+          id: string
+          tracking_number: string
+          courier_id: string | null
+          device_ids: string[]
+          source_type: 'warehouse' | 'engineer' | 'bank'
+          destination_type: 'warehouse' | 'engineer' | 'bank' | 'client'
+          from_warehouse_id: string | null
+          to_warehouse_id: string | null
+          to_engineer_id: string | null
+          status: 'pending' | 'in_transit' | 'delivered' | 'cancelled' | 'returned'
+          shipped_at: string | null
+          delivered_at: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tracking_number: string
+          courier_id?: string | null
+          device_ids?: string[]
+          source_type?: 'warehouse' | 'engineer' | 'bank'
+          destination_type?: 'warehouse' | 'engineer' | 'bank' | 'client'
+          from_warehouse_id?: string | null
+          to_warehouse_id?: string | null
+          to_engineer_id?: string | null
+          status?: 'pending' | 'in_transit' | 'delivered' | 'cancelled' | 'returned'
+          shipped_at?: string | null
+          delivered_at?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tracking_number?: string
+          courier_id?: string | null
+          device_ids?: string[]
+          source_type?: 'warehouse' | 'engineer' | 'bank'
+          destination_type?: 'warehouse' | 'engineer' | 'bank' | 'client'
+          from_warehouse_id?: string | null
+          to_warehouse_id?: string | null
+          to_engineer_id?: string | null
+          status?: 'pending' | 'in_transit' | 'delivered' | 'cancelled' | 'returned'
+          shipped_at?: string | null
+          delivered_at?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shipment_devices: {
+        Row: {
+          id: string
+          shipment_id: string
+          device_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          shipment_id: string
+          device_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          shipment_id?: string
+          device_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      idempotency_keys: {
+        Row: {
+          key: string
+          response: Json | null
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          key: string
+          response?: Json | null
+          created_at?: string
+          expires_at: string
+        }
+        Update: {
+          key?: string
+          response?: Json | null
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      modules: {
+        Row: {
+          id: string
+          name: string
+          display_name: string
+          icon: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          display_name: string
+          icon?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          display_name?: string
+          icon?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      engineer_locations: {
+        Row: {
+          user_id: string
+          full_name: string
+          phone: string | null
+          latitude: number | null
+          longitude: number | null
+          is_active: boolean
+          last_location_updated_at: string | null
+        }
+        Insert: {
+          user_id: string
+          full_name: string
+          phone?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          is_active?: boolean
+          last_location_updated_at?: string | null
+        }
+        Update: {
+          user_id?: string
+          full_name?: string
+          phone?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          is_active?: boolean
+          last_location_updated_at?: string | null
+        }
+        Relationships: []
       }
     }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      check_permission: {
+        Args: {
+          module_name: string
+          permission_type: 'view' | 'create' | 'edit' | 'delete'
+        }
+        Returns: boolean
+      }
+      get_user_permissions: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: {
+          module_name: string
+          can_view: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_delete: boolean
+        }[]
+      }
+      set_user_permission: {
+        Args: {
+          target_user_id: string
+          module_name: string
+          p_can_view: boolean
+          p_can_create: boolean
+          p_can_edit: boolean
+          p_can_delete: boolean
+        }
+        Returns: void
+      }
+      delete_user_permission: {
+        Args: {
+          target_user_id: string
+          module_name: string
+        }
+        Returns: void
+      }
+      get_my_profile: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          phone: string | null
+          role: UserRole
+          bank_id: string | null
+          region: string | null
+          skills: Json
+          status: UserStatus
+          avatar_url: string | null
+          last_location_lat: number | null
+          last_location_lng: number | null
+          last_location_updated_at: string | null
+          totp_enabled: boolean
+          metadata: Json
+          active: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      upsert_my_profile: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_phone?: string | null
+          p_role?: UserRole
+          p_status?: UserStatus
+        }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          role: UserRole
+          status: UserStatus
+        }[]
+      }
+      get_user_modules: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: {
+          module_name: string
+          can_view: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_delete: boolean
+        }[]
+      }
+      has_module_access: {
+        Args: {
+          target_user_id: string
+          module_name: string
+        }
+        Returns: boolean
+      }
+      grant_all_permissions: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: void
+      }
+      grant_module_permission: {
+        Args: {
+          target_user_id: string
+          module_name: string
+          p_can_view?: boolean
+          p_can_create?: boolean
+          p_can_edit?: boolean
+          p_can_delete?: boolean
+        }
+        Returns: void
+      }
+      revoke_module_permission: {
+        Args: {
+          target_user_id: string
+          module_name: string
+        }
+        Returns: void
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
+}
+
+// Helper types for easier usage
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type InsertTables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
+export type UpdateTables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
+
+// Commonly used types
+export type Bank = Tables<'banks'>
+export type UserProfile = Tables<'user_profiles'>
+export type Device = Tables<'devices'>
+export type Call = Tables<'calls'>
+export type CallDevice = Tables<'call_devices'>
+export type Photo = Tables<'photos'>
+export type StockMovement = Tables<'stock_movements'>
+export type StockAlert = Tables<'stock_alerts'>
+export type EngineerAggregate = Tables<'engineer_aggregates'>
+export type Notification = Tables<'notifications'>
+export type UserPermission = Tables<'user_permissions'>
+export type Warehouse = Tables<'warehouses'>
+export type Courier = Tables<'couriers'>
+export type Shipment = Tables<'shipments'>
+export type ShipmentDevice = Tables<'shipment_devices'>
+export type Module = Tables<'modules'>
+export type EngineerLocation = Tables<'engineer_locations'>
+
+// Extended types with relationships
+export interface DeviceWithBank extends Device {
+  banks: Pick<Bank, 'id' | 'name' | 'code'> | null
+}
+
+export interface CallWithRelations extends Call {
+  banks?: Pick<Bank, 'id' | 'name' | 'code'> | null
+  user_profiles?: Pick<UserProfile, 'id' | 'full_name' | 'phone'> | null
+  call_devices?: CallDevice[]
+}
+
+export interface UserProfileWithBank extends UserProfile {
+  banks?: Pick<Bank, 'id' | 'name' | 'code'> | null
 }

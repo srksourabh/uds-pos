@@ -19,6 +19,7 @@
     "@react-google-maps/api": "^2.20.7",
     "@sentry/react": "^10.27.0",
     "@supabase/supabase-js": "^2.57.4",
+    "@tanstack/react-query": "^5.90.12",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.344.0",
     "papaparse": "^5.5.3",

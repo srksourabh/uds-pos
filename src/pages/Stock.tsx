@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDevices, useIssueDevices, useMarkDeviceFaulty } from '../lib/api-hooks';
 import { supabase } from '../lib/supabase';
-import { Package, Search, Filter, Download, Upload, AlertTriangle, X } from 'lucide-react';
+import { Package, Search, Upload, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Stock() {

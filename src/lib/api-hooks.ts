@@ -1,24 +1,77 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import type { Database } from './database.types';
 
+// Type aliases for cleaner code
+type Device = Database['public']['Tables']['devices']['Row'];
+type Call = Database['public']['Tables']['calls']['Row'];
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+type StockAlert = Database['public']['Tables']['stock_alerts']['Row'];
+type Bank = Database['public']['Tables']['banks']['Row'];
+
+// Extended types with relations - use 'name' and 'code' (actual DB column names)
+interface DeviceWithBank extends Device {
+  banks: Pick<Bank, 'id' | 'name' | 'code'> | null;
+}
+
+interface CallWithRelations extends Call {
+  banks: Pick<Bank, 'id' | 'name' | 'code'> | null;
+  user_profiles: Pick<UserProfile, 'id' | 'full_name' | 'email'> | null;
+}
+
+interface EngineerWithAggregates extends UserProfile {
+  banks: Pick<Bank, 'id' | 'name' | 'code'> | null;
+}
+
+// API Error interface
 export interface ApiError {
   error: string;
   error_code?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
-export interface ApiResponse<T> {
-  data: T | null;
-  error: ApiError | null;
-  loading: boolean;
+/**
+ * Sanitize search input to prevent query injection attacks
+ * Escapes special PostgREST characters and limits length
+ */
+function sanitizeSearchInput(input: string): string {
+  if (!input) return '';
+  // Remove or escape special PostgREST filter characters
+  // These characters have special meaning in PostgREST filters: .,()%*
+  const sanitized = input
+    .replace(/[%*]/g, '') // Remove wildcards (we add our own)
+    .replace(/[()]/g, '') // Remove parentheses
+    .replace(/\./g, ' ')  // Replace dots with spaces
+    .trim()
+    .slice(0, 100); // Limit length to prevent abuse
+  return sanitized;
+}
+
+// Dashboard data interface
+interface DashboardKPIs {
+  totalDevices: number;
+  warehouseDevices: number;
+  issuedDevices: number;
+  installedDevices: number;
+  faultyDevices: number;
+  pendingCalls: number;
+  assignedCalls: number;
+  inProgressCalls: number;
+  completedCallsToday: number;
+}
+
+interface DashboardData {
+  kpis: DashboardKPIs;
+  recentAlerts: StockAlert[];
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Helper function to call edge functions
 async function callEdgeFunction<T>(
   functionName: string,
-  payload?: any,
+  payload?: Record<string, unknown>,
   method: 'GET' | 'POST' = 'POST'
 ): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -46,35 +99,43 @@ async function callEdgeFunction<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw data;
+    throw data as ApiError;
   }
 
   return data;
+}
+
+// ============================================
+// MUTATION HOOKS (for edge function calls)
+// ============================================
+
+interface AssignCallsPayload {
+  call_ids: string[];
+  weight_overrides?: {
+    proximity?: number;
+    priority?: number;
+    workload?: number;
+    stock?: number;
+  };
+  dry_run?: boolean;
+  force_reassign?: boolean;
+  [key: string]: unknown;
 }
 
 export function useAssignCalls() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const assignCalls = async (payload: {
-    call_ids: string[];
-    weight_overrides?: {
-      proximity?: number;
-      priority?: number;
-      workload?: number;
-      stock?: number;
-    };
-    dry_run?: boolean;
-    force_reassign?: boolean;
-  }) => {
+  const assignCalls = async (payload: AssignCallsPayload) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await callEdgeFunction('assign-calls', payload);
+      const result = await callEdgeFunction<unknown>('assign-calls', payload);
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -83,34 +144,38 @@ export function useAssignCalls() {
   return { assignCalls, loading, error };
 }
 
+interface SubmitCompletionPayload {
+  call_id: string;
+  resolution_notes: string;
+  actual_duration_minutes: number;
+  completion_timestamp: string;
+  completion_gps?: { latitude: number; longitude: number };
+  merchant_rating?: number;
+  devices: Array<{
+    device_id: string;
+    serial_number: string;
+    action: 'install' | 'swap_in' | 'swap_out' | 'remove' | 'inspect';
+    notes?: string;
+  }>;
+  photo_urls?: string[];
+  idempotency_key?: string;
+  [key: string]: unknown;
+}
+
 export function useSubmitCallCompletion() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const submitCompletion = async (payload: {
-    call_id: string;
-    resolution_notes: string;
-    actual_duration_minutes: number;
-    completion_timestamp: string;
-    completion_gps?: { latitude: number; longitude: number };
-    merchant_rating?: number;
-    devices: Array<{
-      device_id: string;
-      serial_number: string;
-      action: 'install' | 'swap_in' | 'swap_out' | 'remove' | 'inspect';
-      notes?: string;
-    }>;
-    photo_urls?: string[];
-    idempotency_key?: string;
-  }) => {
+  const submitCompletion = async (payload: SubmitCompletionPayload) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await callEdgeFunction('submit-call-completion', payload);
+      const result = await callEdgeFunction<unknown>('submit-call-completion', payload);
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -119,24 +184,28 @@ export function useSubmitCallCompletion() {
   return { submitCompletion, loading, error };
 }
 
+interface IssueDevicesPayload {
+  deviceIds: string[];
+  engineerId: string;
+  notes?: string;
+  idempotency_key?: string;
+  [key: string]: unknown;
+}
+
 export function useIssueDevices() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const issueDevices = async (payload: {
-    deviceIds: string[];
-    engineerId: string;
-    notes?: string;
-    idempotency_key?: string;
-  }) => {
+  const issueDevices = async (payload: IssueDevicesPayload) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await callEdgeFunction('issue-device-to-engineer', payload);
+      const result = await callEdgeFunction<unknown>('issue-device-to-engineer', payload);
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -145,27 +214,31 @@ export function useIssueDevices() {
   return { issueDevices, loading, error };
 }
 
+interface MarkFaultyPayload {
+  deviceId: string;
+  faultDescription: string;
+  faultCategory: 'Hardware' | 'Software' | 'Physical Damage' | 'Other';
+  severity: 'minor' | 'major' | 'critical';
+  requiresRepair?: boolean;
+  estimatedCost?: number;
+  createSwapCall?: boolean;
+  [key: string]: unknown;
+}
+
 export function useMarkDeviceFaulty() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const markFaulty = async (payload: {
-    deviceId: string;
-    faultDescription: string;
-    faultCategory: 'Hardware' | 'Software' | 'Physical Damage' | 'Other';
-    severity: 'minor' | 'major' | 'critical';
-    requiresRepair?: boolean;
-    estimatedCost?: number;
-    createSwapCall?: boolean;
-  }) => {
+  const markFaulty = async (payload: MarkFaultyPayload) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await callEdgeFunction('mark-device-faulty', payload);
+      const result = await callEdgeFunction<unknown>('mark-device-faulty', payload);
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -174,26 +247,30 @@ export function useMarkDeviceFaulty() {
   return { markFaulty, loading, error };
 }
 
+interface SwapDevicePayload {
+  call_id: string;
+  old_device_id: string;
+  new_device_id: string;
+  swap_reason: string;
+  photo_ids: string[];
+  completed_at?: string;
+  [key: string]: unknown;
+}
+
 export function useSwapDevice() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const swapDevice = async (payload: {
-    call_id: string;
-    old_device_id: string;
-    new_device_id: string;
-    swap_reason: string;
-    photo_ids: string[];
-    completed_at?: string;
-  }) => {
+  const swapDevice = async (payload: SwapDevicePayload) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await callEdgeFunction('swap-device', payload);
+      const result = await callEdgeFunction<unknown>('swap-device', payload);
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -202,16 +279,18 @@ export function useSwapDevice() {
   return { swapDevice, loading, error };
 }
 
+interface ReconciliationParams {
+  bankId?: string;
+  startDate?: string;
+  endDate?: string;
+  includeMovements?: boolean;
+}
+
 export function useReconciliationExport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const exportReconciliation = async (params?: {
-    bankId?: string;
-    startDate?: string;
-    endDate?: string;
-    includeMovements?: boolean;
-  }) => {
+  const exportReconciliation = async (params?: ReconciliationParams) => {
     setLoading(true);
     setError(null);
     try {
@@ -236,8 +315,9 @@ export function useReconciliationExport() {
 
       setLoading(false);
       return result;
-    } catch (err: any) {
-      setError(err);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError);
       setLoading(false);
       throw err;
     }
@@ -246,8 +326,12 @@ export function useReconciliationExport() {
   return { exportReconciliation, loading, error };
 }
 
+// ============================================
+// QUERY HOOKS (for data fetching)
+// ============================================
+
 export function useDashboardData() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -260,17 +344,17 @@ export function useDashboardData() {
           supabase.from('stock_alerts').select('*').order('created_at', { ascending: false }).limit(5),
         ]);
 
-        const devicesByStatus = devicesRes.data?.reduce((acc: any, d) => {
+        const devicesByStatus = devicesRes.data?.reduce<Record<string, number>>((acc, d) => {
           acc[d.status] = (acc[d.status] || 0) + 1;
           return acc;
-        }, {});
+        }, {}) || {};
 
-        const callsByStatus = callsRes.data?.reduce((acc: any, c) => {
+        const callsByStatus = callsRes.data?.reduce<Record<string, number>>((acc, c) => {
           acc[c.status] = (acc[c.status] || 0) + 1;
           return acc;
-        }, {});
+        }, {}) || {};
 
-        const completedToday = callsRes.data?.filter((c: any) => {
+        const completedToday = callsRes.data?.filter((c) => {
           const createdAt = new Date(c.created_at);
           const today = new Date();
           return c.status === 'completed' &&
@@ -280,20 +364,20 @@ export function useDashboardData() {
         setData({
           kpis: {
             totalDevices: devicesRes.data?.length || 0,
-            warehouseDevices: devicesByStatus?.warehouse || 0,
-            issuedDevices: devicesByStatus?.issued || 0,
-            installedDevices: devicesByStatus?.installed || 0,
-            faultyDevices: devicesByStatus?.faulty || 0,
-            pendingCalls: callsByStatus?.pending || 0,
-            assignedCalls: callsByStatus?.assigned || 0,
-            inProgressCalls: callsByStatus?.in_progress || 0,
+            warehouseDevices: devicesByStatus.warehouse || 0,
+            issuedDevices: devicesByStatus.issued || 0,
+            installedDevices: devicesByStatus.installed || 0,
+            faultyDevices: devicesByStatus.faulty || 0,
+            pendingCalls: callsByStatus.pending || 0,
+            assignedCalls: callsByStatus.assigned || 0,
+            inProgressCalls: callsByStatus.in_progress || 0,
             completedCallsToday: completedToday,
           },
           recentAlerts: alertsRes.data || [],
         });
         setLoading(false);
-      } catch (err: any) {
-        setError(err);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
     };
@@ -323,13 +407,15 @@ export function useDashboardData() {
   return { data, loading, error };
 }
 
-export function useCalls(filters?: {
+interface CallFilters {
   status?: string;
   priority?: string;
   bank?: string;
   engineer?: string;
-}) {
-  const [data, setData] = useState<any[]>([]);
+}
+
+export function useCalls(filters?: CallFilters) {
+  const [data, setData] = useState<CallWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -338,14 +424,14 @@ export function useCalls(filters?: {
       try {
         let query = supabase
           .from('calls')
-          .select('*, banks(bank_code, bank_name), user_profiles(full_name, email)')
+          .select('*, banks(id, name, code), user_profiles(id, full_name, email)')
           .order('created_at', { ascending: false });
 
         if (filters?.status && filters.status !== 'all') {
-          query = query.eq('status', filters.status);
+          query = query.eq('status', filters.status as Database['public']['Tables']['calls']['Row']['status']);
         }
         if (filters?.priority && filters.priority !== 'all') {
-          query = query.eq('priority', filters.priority);
+          query = query.eq('priority', filters.priority as Database['public']['Tables']['calls']['Row']['priority']);
         }
         if (filters?.bank && filters.bank !== 'all') {
           query = query.eq('client_bank', filters.bank);
@@ -354,12 +440,12 @@ export function useCalls(filters?: {
           query = query.eq('assigned_engineer', filters.engineer);
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
-        setData(data || []);
+        const { data: callData, error: callError } = await query;
+        if (callError) throw callError;
+        setData((callData || []) as unknown as CallWithRelations[]);
         setLoading(false);
-      } catch (err: any) {
-        setError(err);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
     };
@@ -381,13 +467,15 @@ export function useCalls(filters?: {
   return { data, loading, error };
 }
 
-export function useDevices(filters?: {
+interface DeviceFilters {
   status?: string;
   bank?: string;
   assignedTo?: string;
   search?: string;
-}) {
-  const [data, setData] = useState<any[]>([]);
+}
+
+export function useDevices(filters?: DeviceFilters) {
+  const [data, setData] = useState<DeviceWithBank[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -396,11 +484,11 @@ export function useDevices(filters?: {
       try {
         let query = supabase
           .from('devices')
-          .select('*, banks(bank_code, bank_name)')
+          .select('*, banks(id, name, code)')
           .order('created_at', { ascending: false });
 
         if (filters?.status && filters.status !== 'all') {
-          query = query.eq('status', filters.status);
+          query = query.eq('status', filters.status as Database['public']['Tables']['devices']['Row']['status']);
         }
         if (filters?.bank && filters.bank !== 'all') {
           query = query.eq('device_bank', filters.bank);
@@ -409,15 +497,18 @@ export function useDevices(filters?: {
           query = query.eq('assigned_to', filters.assignedTo);
         }
         if (filters?.search) {
-          query = query.or(`serial_number.ilike.%${filters.search}%,model.ilike.%${filters.search}%`);
+          const sanitizedSearch = sanitizeSearchInput(filters.search);
+          if (sanitizedSearch) {
+            query = query.or(`serial_number.ilike.%${sanitizedSearch}%,model.ilike.%${sanitizedSearch}%`);
+          }
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
-        setData(data || []);
+        const { data: deviceData, error: deviceError } = await query;
+        if (deviceError) throw deviceError;
+        setData((deviceData || []) as unknown as DeviceWithBank[]);
         setLoading(false);
-      } catch (err: any) {
-        setError(err);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
     };
@@ -440,7 +531,7 @@ export function useDevices(filters?: {
 }
 
 export function useEngineers() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<EngineerWithAggregates[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -449,15 +540,15 @@ export function useEngineers() {
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('*, banks(bank_code, bank_name), engineer_aggregates(*)')
+          .select('*, banks(id, name, code)')
           .eq('role', 'engineer')
           .order('full_name');
 
         if (error) throw error;
-        setData(data || []);
+        setData((data as EngineerWithAggregates[]) || []);
         setLoading(false);
-      } catch (err: any) {
-        setError(err);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
     };
@@ -480,7 +571,7 @@ export function useEngineers() {
 }
 
 export function useAlerts() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<StockAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -496,8 +587,8 @@ export function useAlerts() {
         if (error) throw error;
         setData(data || []);
         setLoading(false);
-      } catch (err: any) {
-        setError(err);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
     };
@@ -517,4 +608,71 @@ export function useAlerts() {
   }, []);
 
   return { data, loading, error };
+}
+
+// ============================================
+// REACT QUERY HOOKS (optional, for components that want caching)
+// ============================================
+
+export function useDevicesQuery(filters?: DeviceFilters) {
+  return useQuery({
+    queryKey: ['devices', filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('devices')
+        .select('*, banks(id, name, code)')
+        .order('created_at', { ascending: false });
+
+      if (filters?.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status as Database['public']['Tables']['devices']['Row']['status']);
+      }
+      if (filters?.bank && filters.bank !== 'all') {
+        query = query.eq('device_bank', filters.bank);
+      }
+      if (filters?.assignedTo && filters.assignedTo !== 'all') {
+        query = query.eq('assigned_to', filters.assignedTo);
+      }
+      if (filters?.search) {
+        const sanitizedSearch = sanitizeSearchInput(filters.search);
+        if (sanitizedSearch) {
+          query = query.or(`serial_number.ilike.%${sanitizedSearch}%,model.ilike.%${sanitizedSearch}%`);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as unknown as DeviceWithBank[];
+    },
+    staleTime: 30000, // 30 seconds
+  });
+}
+
+export function useCallsQuery(filters?: CallFilters) {
+  return useQuery({
+    queryKey: ['calls', filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('calls')
+        .select('*, banks(id, name, code), user_profiles(id, full_name, email)')
+        .order('created_at', { ascending: false });
+
+      if (filters?.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status as Database['public']['Tables']['calls']['Row']['status']);
+      }
+      if (filters?.priority && filters.priority !== 'all') {
+        query = query.eq('priority', filters.priority as Database['public']['Tables']['calls']['Row']['priority']);
+      }
+      if (filters?.bank && filters.bank !== 'all') {
+        query = query.eq('client_bank', filters.bank);
+      }
+      if (filters?.engineer && filters.engineer !== 'all') {
+        query = query.eq('assigned_engineer', filters.engineer);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as unknown as CallWithRelations[];
+    },
+    staleTime: 30000,
+  });
 }

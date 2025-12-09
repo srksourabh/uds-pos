@@ -1,8 +1,15 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { UserCircle, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+
+// Debug logging helper - only logs in development
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log('[ProfileSetup]', ...args);
+  }
+};
 
 export function ProfileSetup() {
   const navigate = useNavigate();
@@ -55,17 +62,17 @@ export function ProfileSetup() {
         });
 
         if (!rpcError && rpcData) {
-          console.log('Profile created via RPC:', rpcData);
+          debugLog('Profile created via RPC:', rpcData);
           setSuccess(true);
           setTimeout(() => navigate('/pending-approval'), 2000);
           return;
         }
 
         if (rpcError) {
-          console.log('RPC failed, falling back to direct insert:', rpcError.message);
+          debugLog('RPC failed, falling back to direct insert:', rpcError.message);
         }
       } catch {
-        console.log('RPC function may not exist, falling back to direct insert');
+        debugLog('RPC function may not exist, falling back to direct insert');
       }
 
       // Fallback: Try upsert directly
@@ -83,7 +90,7 @@ export function ProfileSetup() {
       if (profileError) {
         // 409 conflict means profile exists - try to navigate to dashboard
         if (profileError.code === '23505' || profileError.message?.includes('duplicate') || profileError.message?.includes('conflict')) {
-          console.log('Profile already exists, navigating to dashboard');
+          debugLog('Profile already exists, navigating to dashboard');
           navigate('/dashboard');
           return;
         }

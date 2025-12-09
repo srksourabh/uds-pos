@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Download } from 'lucide-react';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
+import type { CallType, Priority } from '../lib/database.types';
 
 interface CSVRow {
   call_number?: string;
@@ -133,21 +134,44 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i];
       try {
+        // Validate required fields
+        if (!row.call_number?.trim() || !row.client_name?.trim() || !row.client_address?.trim()) {
+          uploadResults.push({
+            success: false,
+            row: i + 2,
+            call_number: row.call_number || 'N/A',
+            error: 'Missing required fields: call_number, client_name, or client_address',
+          });
+          continue;
+        }
+
+        // Ensure client_bank has a value (required field)
+        const bankValue = row.client_bank || bankId;
+        if (!bankValue) {
+          uploadResults.push({
+            success: false,
+            row: i + 2,
+            call_number: row.call_number || 'N/A',
+            error: 'Missing required field: client_bank',
+          });
+          continue;
+        }
+
         const callData = {
-          call_number: row.call_number?.trim(),
-          type: row.type?.toLowerCase() || 'maintenance',
-          priority: row.priority?.toLowerCase() || 'medium',
-          status: 'pending',
-          client_name: row.client_name?.trim(),
+          call_number: row.call_number.trim(),
+          type: (row.type?.toLowerCase() || 'maintenance') as CallType,
+          priority: (row.priority?.toLowerCase() || 'medium') as Priority,
+          status: 'pending' as const,
+          client_name: row.client_name.trim(),
           client_contact: row.client_contact?.trim() || null,
           client_phone: row.client_phone?.trim() || null,
-          client_address: row.client_address?.trim(),
+          client_address: row.client_address.trim(),
           latitude: row.latitude ? parseFloat(row.latitude) : null,
           longitude: row.longitude ? parseFloat(row.longitude) : null,
           scheduled_date: row.scheduled_date || null,
           scheduled_time_window: row.scheduled_time_window || null,
-          description: row.description?.trim() || null,
-          client_bank: row.client_bank || bankId || null,
+          description: row.description?.trim() || undefined,
+          client_bank: bankValue,
           requires_photo: row.requires_photo?.toLowerCase() === 'true' || row.requires_photo === '1',
         };
 

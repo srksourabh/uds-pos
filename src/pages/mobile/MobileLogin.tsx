@@ -5,6 +5,13 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 
+// Debug logging helper - only logs in development
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log('[MobileLogin]', ...args);
+  }
+};
+
 export default function MobileLogin() {
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
@@ -29,7 +36,7 @@ export default function MobileLogin() {
       // Auto-append @test.com if no @ present
       const email = username.includes('@') ? username : `${username}@test.com`;
 
-      console.log('Attempting login with email:', email);
+      debugLog('Attempting login with email:', email);
 
       // Sign in with email and password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -48,7 +55,7 @@ export default function MobileLogin() {
         return;
       }
 
-      console.log('Auth successful, fetching profile...');
+      debugLog('Auth successful, fetching profile...');
 
       // Fetch user profile to check role
       const { data: profile, error: profileError } = await supabase
@@ -70,7 +77,7 @@ export default function MobileLogin() {
         return;
       }
 
-      console.log('Profile fetched:', profile);
+      debugLog('Profile fetched:', profile);
 
       // Check if user is active
       if (!profile.active || profile.status !== 'active') {
@@ -81,7 +88,7 @@ export default function MobileLogin() {
 
       // Engineers should use mobile interface, admins/super_admins should use web
       if (profile.role === 'engineer') {
-        console.log('Engineer login successful, navigating to mobile dashboard...');
+        debugLog('Engineer login successful, navigating to mobile dashboard...');
         // Refresh profile and navigate to mobile dashboard
         await refreshProfile();
         navigate('/mobile');
