@@ -13,7 +13,6 @@ UNION ALL SELECT 'couriers', COUNT(*) FROM couriers
 UNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles
 UNION ALL SELECT 'devices', COUNT(*) FROM devices
 UNION ALL SELECT 'calls (tickets)', COUNT(*) FROM calls
-UNION ALL SELECT 'call_devices', COUNT(*) FROM call_devices
 UNION ALL SELECT 'stock_movements', COUNT(*) FROM stock_movements
 UNION ALL SELECT 'photos', COUNT(*) FROM photos
 UNION ALL SELECT 'stock_alerts', COUNT(*) FROM stock_alerts
@@ -32,12 +31,11 @@ ORDER BY entity;
 | user_profiles | 5 |
 | devices | 50 |
 | calls (tickets) | 30 |
-| call_devices | 30 |
 | stock_movements | 20 |
 | photos | 15 |
-| stock_alerts | 5 |
-| notifications | 10 |
-| engineer_aggregates | 5 |
+| stock_alerts | 7 |
+| notifications | 8 |
+| engineer_aggregates | 10 |
 
 ---
 
@@ -51,8 +49,8 @@ SELECT
   code,
   active,
   contact_email,
-  CASE WHEN contact_phone IS NOT NULL THEN '✅' ELSE '❌' END as has_phone,
-  CASE WHEN address IS NOT NULL THEN '✅' ELSE '❌' END as has_address
+  CASE WHEN contact_phone IS NOT NULL THEN 'Yes' ELSE 'No' END as has_phone,
+  CASE WHEN address IS NOT NULL THEN 'Yes' ELSE 'No' END as has_address
 FROM banks
 ORDER BY name;
 ```
@@ -66,14 +64,13 @@ SELECT
   name,
   code,
   address,
-  CONCAT(latitude, ', ', longitude) as coordinates,
-  manager_name,
+  contact_person,
   active
 FROM warehouses
 ORDER BY name;
 ```
 
-**Expected**: 3 warehouses (Mumbai, Delhi, Bangalore)
+**Expected**: 3 warehouses (Mumbai Central, Delhi NCR, Bangalore Tech Hub)
 
 ### 3. Couriers Verification
 
@@ -81,7 +78,7 @@ ORDER BY name;
 SELECT
   name,
   code,
-  tracking_url_template,
+  contact_phone,
   active
 FROM couriers
 ORDER BY name;
@@ -123,12 +120,10 @@ ORDER BY count DESC;
 **Expected Distribution**:
 | Status | Approx Count |
 |--------|--------------|
-| warehouse | 15+ |
-| installed | 15+ |
-| issued | 10+ |
-| faulty | 5+ |
-| returned | 3+ |
-| in_transit | 2+ |
+| warehouse | 20 |
+| installed | 15 |
+| issued | 10 |
+| faulty | 5 |
 
 ### 6. Devices by Model
 
@@ -144,11 +139,14 @@ ORDER BY count DESC;
 
 **Expected Models**:
 - Ingenico iCT250
+- Ingenico Move5000
+- Ingenico Desk5000
 - Verifone VX520
 - Verifone VX680
+- Verifone V400m
+- Verifone VX675
 - PAX A920
 - PAX D210
-- Verifone V400m
 - PAX A80
 
 ### 7. Tickets by Status
@@ -157,8 +155,8 @@ ORDER BY count DESC;
 SELECT
   status,
   COUNT(*) as count,
-  COUNT(DISTINCT assigned_to) as engineers_involved,
-  COUNT(DISTINCT bank_id) as banks_affected
+  COUNT(DISTINCT assigned_engineer) as engineers_involved,
+  COUNT(DISTINCT client_bank) as banks_affected
 FROM calls
 GROUP BY status
 ORDER BY
@@ -167,8 +165,7 @@ ORDER BY
     WHEN 'assigned' THEN 2
     WHEN 'in_progress' THEN 3
     WHEN 'completed' THEN 4
-    WHEN 'escalated' THEN 5
-    WHEN 'cancelled' THEN 6
+    WHEN 'cancelled' THEN 5
   END;
 ```
 
@@ -177,22 +174,20 @@ ORDER BY
 |--------|-------|
 | pending | 10 |
 | assigned | 8 |
-| in_progress | 5 |
+| in_progress | 7 (including 2 escalated) |
 | completed | 5 |
-| escalated | 2 |
 
 ### 8. Tickets by Priority
 
 ```sql
 SELECT
   priority,
-  COUNT(*) as count,
-  AVG(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)::decimal(3,2) as completion_rate
+  COUNT(*) as count
 FROM calls
 GROUP BY priority
 ORDER BY
   CASE priority
-    WHEN 'critical' THEN 1
+    WHEN 'urgent' THEN 1
     WHEN 'high' THEN 2
     WHEN 'medium' THEN 3
     WHEN 'low' THEN 4
@@ -203,23 +198,22 @@ ORDER BY
 
 ```sql
 SELECT
-  ticket_number,
-  merchant_name,
-  merchant_city,
-  merchant_lat,
-  merchant_lng,
+  call_number,
+  client_name,
+  latitude,
+  longitude,
   CASE
-    WHEN merchant_lat BETWEEN -90 AND 90
-     AND merchant_lng BETWEEN -180 AND 180
-    THEN '✅ Valid'
-    ELSE '❌ Invalid'
+    WHEN latitude BETWEEN 8 AND 35
+     AND longitude BETWEEN 68 AND 97
+    THEN 'Valid (India)'
+    ELSE 'Invalid'
   END as gps_status
 FROM calls
-WHERE merchant_lat IS NOT NULL
-LIMIT 10;
+WHERE latitude IS NOT NULL
+LIMIT 15;
 ```
 
-**Expected**: All coordinates should be valid (India region: Lat 8-35, Lng 68-97)
+**Expected**: All coordinates should be valid for India region
 
 ### 10. Stock Movements Audit Trail
 
@@ -234,12 +228,9 @@ ORDER BY count DESC;
 ```
 
 **Expected Movement Types**:
-- receipt
-- issue
+- status_change
+- issuance
 - return
-- transfer
-- installation
-- removal
 
 ### 11. Photos Verification
 
@@ -254,12 +245,9 @@ ORDER BY count DESC;
 ```
 
 **Expected Photo Types**:
-- installation
-- device
-- signature
-- issue
 - before
 - after
+- signature
 
 ### 12. Engineer Workload Distribution
 
@@ -272,7 +260,7 @@ SELECT
   SUM(CASE WHEN c.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
   SUM(CASE WHEN c.status = 'assigned' THEN 1 ELSE 0 END) as assigned
 FROM user_profiles u
-LEFT JOIN calls c ON u.id = c.assigned_to
+LEFT JOIN calls c ON u.id = c.assigned_engineer
 WHERE u.role = 'engineer'
 GROUP BY u.id, u.full_name, u.region
 ORDER BY total_tickets DESC;
@@ -299,12 +287,9 @@ ORDER BY total_devices DESC;
 SELECT
   alert_type,
   severity,
-  warehouse_id,
-  (SELECT name FROM warehouses WHERE id = stock_alerts.warehouse_id) as warehouse,
-  device_model,
-  current_quantity,
-  threshold_quantity,
-  resolved
+  (SELECT name FROM banks WHERE id = stock_alerts.bank_id) as bank,
+  title,
+  status
 FROM stock_alerts
 ORDER BY severity DESC, created_at DESC;
 ```
@@ -338,13 +323,13 @@ WHERE d.bank_id IS NOT NULL
 -- Check calls have valid engineers
 SELECT COUNT(*) as orphan_tickets
 FROM calls c
-WHERE c.assigned_to IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM user_profiles u WHERE u.id = c.assigned_to);
+WHERE c.assigned_engineer IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM user_profiles u WHERE u.id = c.assigned_engineer);
 
--- Check call_devices have valid devices
-SELECT COUNT(*) as orphan_call_devices
-FROM call_devices cd
-WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = cd.device_id);
+-- Check photos have valid calls
+SELECT COUNT(*) as orphan_photos
+FROM photos p
+WHERE NOT EXISTS (SELECT 1 FROM calls c WHERE c.id = p.call_id);
 ```
 
 **Expected**: All queries should return 0
@@ -372,9 +357,9 @@ SELECT 'stock_movements', COUNT(*) FROM stock_movements WHERE created_at > NOW()
 -- Check tickets have required fields
 SELECT
   COUNT(*) as total_tickets,
-  SUM(CASE WHEN ticket_number IS NULL THEN 1 ELSE 0 END) as missing_ticket_num,
-  SUM(CASE WHEN merchant_name IS NULL THEN 1 ELSE 0 END) as missing_merchant,
-  SUM(CASE WHEN bank_id IS NULL THEN 1 ELSE 0 END) as missing_bank
+  SUM(CASE WHEN call_number IS NULL THEN 1 ELSE 0 END) as missing_call_num,
+  SUM(CASE WHEN client_name IS NULL THEN 1 ELSE 0 END) as missing_client,
+  SUM(CASE WHEN client_bank IS NULL THEN 1 ELSE 0 END) as missing_bank
 FROM calls;
 ```
 
@@ -395,7 +380,7 @@ EXPLAIN ANALYZE
 SELECT * FROM devices WHERE bank_id = '11111111-1111-1111-1111-111111111111' LIMIT 10;
 
 EXPLAIN ANALYZE
-SELECT * FROM calls WHERE assigned_to IS NOT NULL AND status = 'assigned' LIMIT 10;
+SELECT * FROM calls WHERE assigned_engineer IS NOT NULL AND status = 'assigned' LIMIT 10;
 ```
 
 ### Query Performance Baseline
@@ -448,13 +433,18 @@ BEGIN
   END IF;
 
   IF issues = '' THEN
-    RAISE NOTICE E'\n✅ DATA VERIFICATION PASSED\n';
+    RAISE NOTICE E'\n========================================';
+    RAISE NOTICE 'DATA VERIFICATION PASSED';
+    RAISE NOTICE '========================================';
     RAISE NOTICE 'Banks: %', bank_count;
     RAISE NOTICE 'Engineers: %', engineer_count;
     RAISE NOTICE 'Devices: %', device_count;
     RAISE NOTICE 'Tickets: %', ticket_count;
   ELSE
-    RAISE WARNING E'\n❌ DATA VERIFICATION FAILED\n%', issues;
+    RAISE WARNING E'\n========================================';
+    RAISE WARNING 'DATA VERIFICATION FAILED';
+    RAISE WARNING '========================================';
+    RAISE WARNING '%', issues;
   END IF;
 END $$;
 ```
@@ -463,9 +453,11 @@ END $$;
 
 ## Test Data Quality Checklist
 
+After running verification queries, confirm:
+
 - [ ] All 8 banks created with contact info
-- [ ] All 3 warehouses with GPS coordinates
-- [ ] All 4 couriers with tracking URLs
+- [ ] All 3 warehouses with addresses
+- [ ] All 4 couriers with contact phones
 - [ ] 5 engineers with profiles and regions
 - [ ] 50+ devices across all statuses
 - [ ] 30 tickets with varied statuses
@@ -474,11 +466,11 @@ END $$;
 - [ ] Stock alerts for low inventory
 - [ ] Notifications for engineers
 - [ ] Engineer aggregates populated
-- [ ] GPS coordinates within India bounds
+- [ ] GPS coordinates within India bounds (Lat 8-35, Lng 68-97)
 - [ ] All foreign keys valid
 - [ ] No null required fields
 - [ ] Ticket numbers sequential (TKT2024001-030)
-- [ ] Device serials follow pattern (ING/VER/PAX prefix)
+- [ ] Device serials follow pattern (ING/VFN/PAX prefix)
 
 ---
 

@@ -10,6 +10,36 @@ This guide provides step-by-step testing instructions for all major workflows in
 
 ---
 
+## Application Routes Reference
+
+### Admin Routes (require admin role)
+- `/dashboard` - Main dashboard with metrics
+- `/calls` - Service tickets list
+- `/calls/:id` - Ticket detail view
+- `/devices` - Device inventory management
+- `/stock` - Stock overview
+- `/stock-movements` - Inventory transaction history
+- `/receive-stock` - Receive new stock
+- `/in-transit` - Devices in transit
+- `/alerts` - Stock alerts and notifications
+- `/reports` - Performance reports (admin only)
+- `/engineers` - Engineer management (admin only)
+- `/banks` - Bank management (admin only)
+- `/approvals` - User approvals (admin only)
+- `/users` - User management (admin only)
+
+### Mobile/Engineer Routes
+- `/mobile/login` - Engineer mobile login
+- `/mobile/calls` - Engineer's assigned calls
+- `/mobile/calls/:id` - Call detail view
+- `/mobile/calls/:id/scan` - Device scanning
+- `/mobile/calls/:id/complete` - Call completion flow
+- `/mobile/inventory` - Engineer's inventory
+- `/mobile/photos/:id` - Photo capture
+- `/mobile/install/:id` - Installation flow
+
+---
+
 ## WORKFLOW 1: Admin Creates and Assigns Ticket
 
 **Goal**: Create a new service ticket and assign it to an engineer
@@ -22,445 +52,339 @@ This guide provides step-by-step testing instructions for all major workflows in
    - Enter password: `admin`
    - Click "Sign In"
 
-2. **Navigate to Tickets**
-   - From the dashboard, click "Tickets" in the sidebar
-   - Or navigate to `/tickets`
+2. **Navigate to Calls**
+   - From the dashboard, click "Calls" in the sidebar
+   - Or navigate to `/calls`
 
 3. **Create New Ticket**
-   - Click "New Ticket" or "+" button
+   - Click "New Call" or "+" button
    - Fill in the form:
      - **Bank**: Select "HDFC Bank"
-     - **Merchant**: Enter "Sharma Electronics"
-     - **Address**: "Shop 12, MG Road, Andheri West, Mumbai"
-     - **Contact**: "Rajesh Sharma"
-     - **Phone**: "+91-9876500001"
-     - **Issue Type**: Select "Device Malfunction"
-     - **Priority**: Select "High"
-     - **Description**: "POS terminal showing 'Card Reader Error' message. Customer transactions failing."
+     - **Client Name**: "Test Merchant"
+     - **Address**: "123 Test Street, Mumbai"
+     - **Contact**: "Test Contact"
+     - **Phone**: "+91-9876543210"
+     - **Call Type**: Select "breakdown"
+     - **Priority**: Select "high"
+     - **Description**: "POS terminal showing 'Card Reader Error' message"
 
 4. **Add GPS Location**
-   - Click "Set Location" button
+   - Click "Set Location" or use the map picker
    - Either:
      - Allow browser location access, OR
      - Manually enter: Lat: 19.1234, Lng: 72.8567
 
-5. **Select Device (if applicable)**
-   - Search for device by serial number
-   - Or select from bank's device list
-
-6. **Submit Ticket**
+5. **Submit Ticket**
    - Review all information
-   - Click "Create Ticket"
+   - Click "Create" or "Submit"
    - Note the ticket number (e.g., TKT2024031)
 
-7. **Assign Engineer**
-   - Click on the newly created ticket
-   - Click "Assign Engineer"
+6. **Assign Engineer**
+   - Click on the newly created ticket in the list
+   - Click "Assign" or "Assign Engineer"
    - Select "Rajesh Kumar" (Mumbai region)
-   - Add assignment note: "High priority - merchant has high transaction volume"
-   - Click "Assign"
+   - Add assignment note if needed
+   - Click "Confirm Assignment"
 
 ### Expected Results
-- ✅ Ticket created with status "pending"
-- ✅ Ticket status changes to "assigned" after engineer assignment
-- ✅ Engineer receives notification
-- ✅ Ticket appears in engineer's dashboard
+- Ticket created with status "pending"
+- Ticket status changes to "assigned" after engineer assignment
+- Ticket appears in Rajesh's mobile app
 
 ---
 
 ## WORKFLOW 2: Engineer Views and Accepts Ticket
 
-**Goal**: Engineer logs in and accepts an assigned ticket
+**Goal**: Engineer logs in and views assigned tickets
 
 ### Steps
 
-1. **Login as Engineer**
-   - Logout from admin account
+1. **Login as Engineer (Mobile View)**
+   - Navigate to http://localhost:5173/mobile/login
    - Login with: `test` / `test`
-   - Or use engineer email from test data
+   - Or use: `rajesh@uds.com` / `Engineer@123`
 
-2. **View Dashboard**
-   - Dashboard shows:
-     - Assigned tickets count
-     - Today's schedule
-     - Pending tasks
+2. **View Assigned Calls**
+   - After login, you'll see `/mobile/calls`
+   - Dashboard shows assigned tickets
+   - Filter by status if needed
 
-3. **View Assigned Tickets**
-   - Click "My Tickets" or navigate to assigned tickets list
-   - Find the ticket assigned in Workflow 1
-
-4. **Review Ticket Details**
-   - Click on the ticket to open details
+3. **View Call Details**
+   - Click on an assigned ticket (e.g., TKT2024011)
+   - Opens `/mobile/calls/{id}`
    - Review:
      - Merchant information
      - Issue description
      - Priority level
      - Location on map
 
-5. **Accept Assignment**
-   - Click "Accept" button
-   - Confirm acceptance
-   - Ticket status changes to "in_progress"
-
-6. **View on Map**
+4. **View Location**
    - Click "Navigate" or map icon
    - Opens Google Maps with merchant location
 
 ### Expected Results
-- ✅ Engineer can see all assigned tickets
-- ✅ Ticket details display correctly
-- ✅ Status updates to "in_progress"
-- ✅ Navigation to merchant location works
+- Engineer sees all assigned tickets
+- Ticket details display correctly
+- Navigation to merchant location works
 
 ---
 
-## WORKFLOW 3: Engineer Arrives and Diagnoses Issue
+## WORKFLOW 3: Engineer Starts Work on Ticket
 
-**Goal**: Engineer arrives at location, documents arrival, and diagnoses the issue
+**Goal**: Engineer arrives at location and begins work
 
 ### Steps
 
-1. **Mark Arrival**
-   - Open the ticket in mobile view
-   - Click "Check In" or "Arrived"
+1. **Update Status to In Progress**
+   - Open ticket detail `/mobile/calls/{id}`
+   - Click "Start Work" or "Begin"
+   - Status changes to "in_progress"
+
+2. **Check In at Location**
    - Allow location access for GPS verification
-   - System records arrival time and location
+   - System records arrival time and coordinates
 
-2. **Document Site Conditions**
-   - Take photo of merchant premises
-   - Click "Add Photo" → "Installation Site"
-   - Capture and upload image
+3. **Scan Device (if applicable)**
+   - Navigate to `/mobile/calls/{id}/scan`
+   - Use camera to scan device serial/QR code
+   - Or manually enter serial number
 
-3. **Inspect Device**
-   - Locate the POS terminal
-   - Note the serial number
-   - Verify it matches ticket information
-
-4. **Document Device Condition**
-   - Take photo of device
-   - Click "Add Photo" → "Device Condition"
-   - Note any visible damage
-
-5. **Run Diagnostics**
-   - Check device connectivity
-   - Test card reader
-   - Review error logs if accessible
-
-6. **Record Diagnosis**
-   - Click "Add Diagnosis"
-   - Select issue type: "Card Reader Failure"
-   - Add notes: "Card reader sensor damaged. Requires replacement unit."
-   - Recommend action: "Device Replacement"
+4. **Take Before Photos**
+   - Navigate to `/mobile/photos/{id}`
+   - Select "Before" photo type
+   - Capture device condition
+   - Add caption if needed
 
 ### Expected Results
-- ✅ Check-in time recorded
-- ✅ GPS coordinates captured
-- ✅ Photos uploaded to correct ticket
-- ✅ Diagnosis saved with timestamp
+- Status updated to "in_progress"
+- Check-in time recorded
+- GPS coordinates captured
+- Photos uploaded successfully
 
 ---
 
-## WORKFLOW 4: Engineer Performs Installation/Repair
-
-**Goal**: Complete the device installation or repair
-
-### Steps
-
-1. **Request Replacement Device (if needed)**
-   - Click "Request Device"
-   - Select device type: "Verifone VX520"
-   - Source: "Warehouse Stock" or "Swap from Inventory"
-
-2. **Document Old Device Removal**
-   - Take photo of old device
-   - Record old serial number
-   - Update device status to "faulty"
-
-3. **Install New Device**
-   - Unbox new terminal
-   - Connect to power and network
-   - Configure merchant settings
-
-4. **Document Installation**
-   - Take photo of installed device
-   - Take photo of cable connections
-   - Record new serial number
-
-5. **Test New Device**
-   - Run test transaction
-   - Verify receipt printing
-   - Test card reader (chip, swipe, contactless)
-
-6. **Update Inventory**
-   - Mark old device as "returned/faulty"
-   - Mark new device as "installed"
-   - System updates stock automatically
-
-### Expected Results
-- ✅ Old device marked as faulty
-- ✅ New device status = "installed"
-- ✅ Stock movement records created
-- ✅ Installation photos attached
-
----
-
-## WORKFLOW 5: Engineer Collects Customer Signature
-
-**Goal**: Get merchant confirmation and signature
-
-### Steps
-
-1. **Review Work Summary**
-   - Open completion form
-   - Verify all work items listed
-   - Check device serial numbers
-
-2. **Present to Merchant**
-   - Show work summary on device
-   - Explain what was done
-   - Confirm satisfaction
-
-3. **Collect Signature**
-   - Click "Collect Signature"
-   - Hand device to merchant
-   - Merchant signs on screen
-   - Save signature
-
-4. **Add Customer Feedback**
-   - Ask for feedback
-   - Record rating (1-5 stars)
-   - Note any comments
-
-### Expected Results
-- ✅ Digital signature captured
-- ✅ Signature attached to ticket
-- ✅ Feedback recorded
-
----
-
-## WORKFLOW 6: Engineer Completes Ticket
+## WORKFLOW 4: Engineer Completes Ticket
 
 **Goal**: Finalize and close the service ticket
 
 ### Steps
 
-1. **Complete Checklist**
-   - ✅ Issue diagnosed
-   - ✅ Solution implemented
-   - ✅ Device tested
-   - ✅ Photos uploaded
-   - ✅ Signature collected
+1. **Navigate to Completion Flow**
+   - From call detail, click "Complete Call"
+   - Opens `/mobile/calls/{id}/complete`
 
-2. **Add Final Notes**
-   - Click "Add Resolution Notes"
-   - Enter: "Replaced faulty VX520 unit (S/N: VER001) with new unit (S/N: VER051). Tested successfully. Merchant satisfied."
+2. **Add Resolution Details**
+   - Select resolution type
+   - Enter notes: "Replaced card reader module. Tested successfully."
+   - Select parts used (if any)
 
-3. **Submit for Completion**
-   - Click "Complete Ticket"
-   - Confirm all required fields
-   - Submit
+3. **Take After Photos**
+   - Capture device after repair
+   - Add "After" photo type
+   - Optional: Photo of replaced parts
 
-4. **Auto-Generated Records**
-   - System creates completion timestamp
-   - Engineer metrics updated
-   - Inventory adjusted
+4. **Collect Customer Signature**
+   - Customer signs on screen
+   - Save signature
+
+5. **Submit Completion**
+   - Review all information
+   - Click "Complete" or "Submit"
 
 ### Expected Results
-- ✅ Ticket status = "completed"
-- ✅ Completion time recorded
-- ✅ Engineer performance metrics updated
-- ✅ Device history updated
+- Ticket status = "completed"
+- Completion time recorded
+- Photos and signature attached
+- Stock/parts usage recorded
 
 ---
 
-## WORKFLOW 7: Admin Reviews Completed Tickets
+## WORKFLOW 5: Admin Reviews Dashboard
 
-**Goal**: Admin reviews and approves completed work
+**Goal**: Admin views system overview and metrics
 
 ### Steps
 
 1. **Login as Admin**
+   - Navigate to http://localhost:5173/login
    - Login with: `admin` / `admin`
 
-2. **View Completed Tickets**
-   - Navigate to Tickets → Filter by "Completed"
-   - Or view completion queue
+2. **View Dashboard** (`/dashboard`)
+   - See ticket counts by status
+   - View pending/assigned/completed metrics
+   - Check alerts and notifications
 
-3. **Review Ticket Details**
-   - Click on completed ticket
-   - Review:
-     - Timeline of events
-     - Photos uploaded
-     - Diagnosis and resolution
-     - Customer signature
-     - Engineer notes
+3. **View Calls List** (`/calls`)
+   - Filter by status: pending, assigned, in_progress, completed
+   - Filter by priority
+   - Filter by bank
+   - Search by ticket number or merchant
 
-4. **Verify Documentation**
-   - Check all photos are clear
-   - Verify serial numbers match
-   - Confirm work was appropriate
-
-5. **Approve or Request Changes**
-   - If satisfactory: Click "Approve"
-   - If issues: Click "Request Revision" with notes
+4. **View Ticket Details** (`/calls/{id}`)
+   - Full timeline of events
+   - Photos uploaded
+   - Engineer notes
+   - Device information
 
 ### Expected Results
-- ✅ Full ticket history visible
-- ✅ All photos viewable
-- ✅ Approval/rejection recorded
+- Dashboard shows accurate counts
+- Filters work correctly
+- Ticket history is complete
 
 ---
 
-## WORKFLOW 8: Admin Manages Inventory
+## WORKFLOW 6: Admin Manages Inventory
 
 **Goal**: View and manage POS device inventory
 
 ### Steps
 
-1. **View Inventory Dashboard**
-   - Navigate to "Inventory" or "Devices"
-   - View summary by status
+1. **View Stock Overview** (`/stock`)
+   - See devices by status
+   - View by bank/model
+   - Check warehouse inventory
 
-2. **Filter Devices**
-   - By status: warehouse, issued, installed, faulty
-   - By bank
-   - By region
-   - By device model
+2. **View Device Details** (`/devices`)
+   - Filter by status: warehouse, issued, installed, faulty
+   - Filter by bank
+   - Filter by model
+   - Search by serial number
 
-3. **View Device Details**
-   - Click on any device
-   - See full history:
-     - Stock movements
-     - Assignment history
-     - Service history
+3. **View Stock Movements** (`/stock-movements`)
+   - See all device transfers
+   - Filter by movement type
+   - Track device history
 
-4. **Transfer Device**
-   - Select device in "warehouse" status
-   - Click "Issue to Engineer"
-   - Select engineer
-   - Add notes
-   - Confirm transfer
+4. **Receive New Stock** (`/receive-stock`)
+   - Add new devices to warehouse
+   - Enter serial numbers
+   - Select bank and model
 
-5. **View Stock Alerts**
-   - Navigate to "Alerts"
-   - View low stock warnings
-   - View devices needing attention
+5. **View Alerts** (`/alerts`)
+   - Low stock warnings
+   - Warranty expiring alerts
+   - Maintenance due alerts
 
 ### Expected Results
-- ✅ Accurate inventory counts
-- ✅ Stock movements tracked
-- ✅ Low stock alerts displayed
+- Accurate inventory counts
+- Stock movements tracked
+- Alerts displayed correctly
 
 ---
 
-## WORKFLOW 9: Generate Reports
+## WORKFLOW 7: Admin Manages Engineers
+
+**Goal**: View and manage field engineers
+
+### Steps
+
+1. **Navigate to Engineers** (`/engineers`)
+   - View all engineers
+   - See their status and region
+   - Check assigned calls count
+
+2. **View Engineer Details**
+   - Click on an engineer
+   - See their assigned calls
+   - View performance metrics
+   - Check current location (if available)
+
+3. **Manage User Approvals** (`/approvals`)
+   - View pending user registrations
+   - Approve or reject users
+   - Assign roles
+
+4. **User Management** (`/users`)
+   - View all users
+   - Edit user roles
+   - Deactivate users
+
+### Expected Results
+- Engineer list accurate
+- Performance data available
+- Approvals work correctly
+
+---
+
+## WORKFLOW 8: Generate Reports
 
 **Goal**: Generate various operational reports
 
 ### Steps
 
-1. **Access Reports**
-   - Navigate to "Reports" section
+1. **Access Reports** (`/reports`)
+   - Admin only route
 
-2. **Engineer Performance Report**
-   - Select "Engineer Performance"
-   - Choose date range
-   - Select engineers (all or specific)
-   - Generate report showing:
-     - Tickets completed
-     - Average resolution time
-     - Customer ratings
+2. **View Available Reports**
+   - Engineer Performance
+   - Device Inventory
+   - Ticket Analysis
+   - Stock Movements
 
-3. **Device Status Report**
-   - Select "Device Inventory"
-   - Filter by bank/region
-   - Generate showing:
-     - Devices by status
-     - Age of installations
-     - Faulty device trends
+3. **Generate Report**
+   - Select date range
+   - Choose filters (bank, engineer, etc.)
+   - Click "Generate"
 
-4. **Ticket Analysis Report**
-   - Select "Ticket Analysis"
-   - Choose date range
-   - Generate showing:
-     - Tickets by status
-     - Average time to resolve
-     - Common issue types
-
-5. **Export Report**
+4. **Export Report**
    - Click "Export"
-   - Choose format (PDF/Excel)
-   - Download file
+   - Download as PDF or Excel
 
 ### Expected Results
-- ✅ Reports generate correctly
-- ✅ Data matches expectations
-- ✅ Export works
+- Reports generate correctly
+- Data matches expectations
+- Export works
 
 ---
 
-## WORKFLOW 10: Handle Escalation
-
-**Goal**: Escalate and resolve complex issues
-
-### Steps
-
-1. **Identify Escalation Need**
-   - Engineer encounters issue beyond capability
-   - Or ticket exceeds SLA
-
-2. **Escalate Ticket**
-   - Open ticket
-   - Click "Escalate"
-   - Select reason:
-     - "Complex technical issue"
-     - "Customer complaint"
-     - "Parts unavailable"
-   - Add detailed notes
-   - Submit
-
-3. **Admin Reviews Escalation**
-   - Login as admin
-   - View escalated tickets queue
-   - Review escalation reason
-
-4. **Take Action**
-   - Reassign to senior engineer, OR
-   - Arrange special parts, OR
-   - Contact customer directly
-
-5. **Resolve Escalation**
-   - Update ticket with resolution
-   - Close escalation
-   - Return to normal workflow
-
-### Expected Results
-- ✅ Escalation recorded with reason
-- ✅ Admin notified
-- ✅ Escalation history maintained
-
----
-
-## Test Data Shortcuts
+## Test Data Quick Reference
 
 ### Quick Access Tickets
 
-| Ticket ID | Status | Description |
-|-----------|--------|-------------|
-| TKT2024001 | pending | New ticket for testing assignment |
-| TKT2024011 | assigned | Ready for engineer acceptance |
-| TKT2024019 | in_progress | Active work in progress |
-| TKT2024024 | completed | Finished ticket with photos |
-| TKT2024029 | escalated | Escalation testing |
+| Ticket | Status | Description |
+|--------|--------|-------------|
+| TKT2024001 | pending | Sharma Electronics - printer issue |
+| TKT2024011 | assigned | Kapoor Mobiles - touchscreen |
+| TKT2024019 | in_progress | Fashion Hub - connectivity |
+| TKT2024024 | completed | Royal Sweets - keypad |
+| TKT2024029 | escalated | Luxury Watches - security alert |
 
 ### Quick Access Devices
 
 | Serial | Status | Location |
 |--------|--------|----------|
-| ING001 | warehouse | Mumbai Warehouse |
-| VER010 | issued | With Rajesh Kumar |
-| PAX020 | installed | HDFC Merchant |
-| ING005 | faulty | Awaiting repair |
+| ING-2024-00001 | warehouse | Mumbai Warehouse |
+| ING-2023-10001 | issued | With Rajesh Kumar |
+| ING-2022-20001 | installed | Sharma Electronics |
+| ING-2021-30001 | faulty | Repair Section |
+
+### Test Credentials Summary
+
+| Account | Login | Password | Access |
+|---------|-------|----------|--------|
+| Admin (Frontend) | admin | admin | Full admin |
+| Engineer (Frontend) | test | test | Engineer |
+| Admin (Supabase) | admin@uds.com | Admin@123 | Full admin |
+| Engineer (Supabase) | rajesh@uds.com | Engineer@123 | Engineer |
+
+---
+
+## Mobile App Testing
+
+### Testing on Mobile Device
+
+1. Start dev server: `npm run dev`
+2. Find your local IP: `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
+3. Access from mobile: `http://{your-ip}:5173/mobile/login`
+
+### Mobile Routes to Test
+
+1. `/mobile/login` - Login page
+2. `/mobile/calls` - Call list
+3. `/mobile/calls/{id}` - Call detail
+4. `/mobile/calls/{id}/scan` - Device scanning
+5. `/mobile/calls/{id}/complete` - Completion flow
+6. `/mobile/inventory` - Inventory view
 
 ---
 
@@ -470,36 +394,26 @@ This guide provides step-by-step testing instructions for all major workflows in
 - Check username/password
 - Try frontend accounts: admin/admin, test/test
 - Clear browser cache
+- Check if `VITE_ENABLE_TEST_ACCOUNTS=true` in `.env`
 
 ### Ticket Not Saving
 - Check all required fields
 - Verify GPS coordinates format
 - Check network connection
+- Check browser console for errors
 
 ### Photos Not Uploading
 - Check file size (max 5MB)
 - Verify image format (JPG, PNG)
 - Check storage permissions
+- Verify Supabase storage bucket exists
 
 ### Map Not Loading
-- Verify Google Maps API key
+- Verify Google Maps API key in `.env`
 - Check GPS coordinates are valid
 - Ensure internet connection
 
----
-
-## Performance Testing
-
-### Load Test Scenarios
-
-1. **Create 50 tickets in 5 minutes**
-   - Tests: Database writes, validation
-
-2. **Assign tickets to all engineers simultaneously**
-   - Tests: Concurrent updates, notifications
-
-3. **Upload 100 photos across different tickets**
-   - Tests: Storage, image processing
-
-4. **Generate all reports for full date range**
-   - Tests: Query performance, data aggregation
+### Data Not Appearing
+- Run verification queries from DATA_VERIFICATION_REPORT.md
+- Check if seed_test_data.sql ran successfully
+- Verify Supabase connection in browser console
