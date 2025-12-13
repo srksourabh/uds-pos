@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDevices, useIssueDevices, useMarkDeviceFaulty } from '../lib/api-hooks';
 import { supabase } from '../lib/supabase';
 import { Package, Search, Upload, AlertTriangle, X } from 'lucide-react';
@@ -25,10 +25,15 @@ export function Stock() {
   const [banks, setBanks] = useState<any[]>([]);
   const [engineers, setEngineers] = useState<any[]>([]);
 
-  useState(() => {
-    supabase.from('banks').select('*').then(({ data }) => setBanks(data || []));
-    supabase.from('user_profiles').select('*').eq('role', 'engineer').then(({ data }) => setEngineers(data || []));
-  });
+  useEffect(() => {
+    Promise.all([
+      supabase.from('banks').select('*'),
+      supabase.from('user_profiles').select('*').eq('role', 'engineer')
+    ]).then(([banksRes, engineersRes]) => {
+      setBanks(banksRes.data || []);
+      setEngineers(engineersRes.data || []);
+    });
+  }, []);
 
   const handleSelectDevice = (deviceId: string) => {
     setSelectedDevices(prev =>
@@ -141,7 +146,7 @@ export function Stock() {
           >
             <option value="all">All Banks</option>
             {banks.map(bank => (
-              <option key={bank.id} value={bank.id}>{bank.bank_name}</option>
+              <option key={bank.id} value={bank.id}>{bank.name}</option>
             ))}
           </select>
         </div>
@@ -200,7 +205,7 @@ export function Stock() {
                       {device.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{device.banks?.bank_code}</td>
+                  <td className="px-6 py-4 text-gray-600">{device.banks?.code}</td>
                   <td className="px-6 py-4 text-gray-600 text-sm">
                     {device.installed_at_client || device.assigned_to || 'Warehouse'}
                   </td>

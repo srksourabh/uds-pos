@@ -81,15 +81,24 @@ export function Dashboard() {
   const [mapCalls, setMapCalls] = useState<MapCall[]>([]);
   const [showMap, setShowMap] = useState(true);
 
+  // Wait for auth to be ready before loading data
   useEffect(() => {
-    loadDashboardStats();
+    // Don't load until we know the user's role (profile must be loaded)
+    if (profile === null) {
+      return;
+    }
+
+    // Capture current isAdmin value for this effect run
+    const currentIsAdmin = isAdmin;
+
+    loadDashboardStats(currentIsAdmin);
     loadChartData();
     loadMapData();
 
     const devicesChannel = supabase
       .channel('dashboard-devices')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, () => {
-        loadDashboardStats();
+        loadDashboardStats(currentIsAdmin);
         loadChartData();
       })
       .subscribe();
@@ -97,7 +106,7 @@ export function Dashboard() {
     const callsChannel = supabase
       .channel('dashboard-calls')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, () => {
-        loadDashboardStats();
+        loadDashboardStats(currentIsAdmin);
         loadChartData();
         loadMapData();
       })
@@ -115,15 +124,30 @@ export function Dashboard() {
       callsChannel.unsubscribe();
       engineersChannel.unsubscribe();
     };
-  }, []);
+  }, [profile, isAdmin]);
 
-  const loadDashboardStats = async () => {
+  const loadDashboardStats = async (adminAccess: boolean = isAdmin) => {
     try {
       const [devicesRes, callsRes, engineersRes] = await Promise.all([
         supabase.from('devices').select('status'),
         supabase.from('calls').select('status, completed_at'),
-        isAdmin ? supabase.from('user_profiles').select('id').eq('role', 'engineer') : Promise.resolve({ data: [] })
+        adminAccess ? supabase.from('user_profiles').select('id').eq('role', 'engineer') : Promise.resolve({ data: [] })
       ]);
+
+      // Debug logging for development
+      if (import.meta.env.DEV) {
+        console.log('[Dashboard] Query results:', {
+          devices: { data: devicesRes.data?.length, error: devicesRes.error },
+          calls: { data: callsRes.data?.length, error: callsRes.error },
+          engineers: { data: engineersRes.data?.length, error: (engineersRes as any).error },
+          adminAccess
+        });
+      }
+
+      // Log any errors
+      if (devicesRes.error) console.error('[Dashboard] Devices query error:', devicesRes.error);
+      if (callsRes.error) console.error('[Dashboard] Calls query error:', callsRes.error);
+      if ((engineersRes as any).error) console.error('[Dashboard] Engineers query error:', (engineersRes as any).error);
 
       const devices = devicesRes.data || [];
       const calls = callsRes.data || [];

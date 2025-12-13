@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useReconciliationExport } from '../lib/api-hooks';
 import { supabase } from '../lib/supabase';
 import { Download, Calendar, FileText, Filter, Loader } from 'lucide-react';
@@ -15,9 +15,9 @@ export function Reports() {
 
   const [exportResult, setExportResult] = useState<any>(null);
 
-  useState(() => {
+  useEffect(() => {
     supabase.from('banks').select('*').then(({ data }) => setBanks(data || []));
-  });
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -76,7 +76,7 @@ export function Reports() {
             >
               <option value="">All Banks</option>
               {banks.map(bank => (
-                <option key={bank.id} value={bank.id}>{bank.bank_name} ({bank.bank_code})</option>
+                <option key={bank.id} value={bank.id}>{bank.name} ({bank.code})</option>
               ))}
             </select>
           </div>

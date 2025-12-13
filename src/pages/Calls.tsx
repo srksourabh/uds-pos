@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X } from 'lucide-react';
 import type { Database } from '../lib/database.types';
@@ -11,6 +12,7 @@ type Call = Database['public']['Tables']['calls']['Row'] & {
 };
 
 export function Calls() {
+  const navigate = useNavigate();
   const [calls, setCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -200,7 +202,10 @@ export function Calls() {
                     <p className="text-gray-600">Assigned Engineer</p>
                     <p className="font-medium text-gray-900">{call.engineer?.full_name || 'Unassigned'}</p>
                   </div>
-                  <button className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                  <button
+                    onClick={() => navigate(`/calls/${call.id}`)}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  >
                     View Details
                   </button>
                 </div>

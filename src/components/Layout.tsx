@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { MODULES } from '../lib/permissions';
+import { GlobalSearch } from './GlobalSearch';
 import {
   LayoutDashboard,
   Smartphone,
@@ -106,6 +107,9 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="hidden sm:flex sm:items-center sm:space-x-4">
+              {/* Global Search */}
+              <GlobalSearch />
+
               <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
                 <Bell className="w-6 h-6" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
