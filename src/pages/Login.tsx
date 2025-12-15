@@ -63,8 +63,11 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                placeholder="admin"
+                placeholder="admin@uds.com"
               />
+              <p className="mt-1.5 text-xs text-gray-500">
+                Test: <span className="font-mono bg-gray-100 px-1 rounded">super@uds.com</span> | <span className="font-mono bg-gray-100 px-1 rounded">admin@uds.com</span> | <span className="font-mono bg-gray-100 px-1 rounded">engineer@uds.com</span>
+              </p>
             </div>
 
             <div>
@@ -80,6 +83,9 @@ export function Login() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 placeholder="Enter your password"
               />
+              <p className="mt-1.5 text-xs text-gray-500">
+                Test password: <span className="font-mono bg-gray-100 px-1 rounded">Test@123</span>
+              </p>
             </div>
 
             <button
@@ -90,13 +96,6 @@ export function Login() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              <strong>Test Accounts:</strong> super / admin / engineer<br />
-              (Password = same as username)
-            </p>
-          </div>
         </div>
       </div>
     </div>
