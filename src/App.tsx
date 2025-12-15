@@ -28,12 +28,15 @@ import { Engineers } from './pages/Engineers';
 import { Banks } from './pages/Banks';
 import { Approvals } from './pages/Approvals';
 import { StockMovements } from './pages/StockMovements';
+import { StockTransfer } from './pages/StockTransfer';
 import { Stock } from './pages/Stock';
 import { Alerts } from './pages/Alerts';
 import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
 import { UserManagement } from './pages/UserManagement';
+import { Merchants } from './pages/Merchants';
+import { Warehouses } from './pages/Warehouses';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -112,6 +115,36 @@ function App() {
                     <ProtectedRoute>
                       <Layout>
                         <Stock />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/stock-transfer"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <StockTransfer />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/merchants"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Merchants />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/warehouses"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Warehouses />
                       </Layout>
                     </ProtectedRoute>
                   }
