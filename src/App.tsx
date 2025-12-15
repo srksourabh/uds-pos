@@ -37,6 +37,9 @@ import { InTransit } from './pages/InTransit';
 import { UserManagement } from './pages/UserManagement';
 import { Merchants } from './pages/Merchants';
 import { Warehouses } from './pages/Warehouses';
+import { ActivityLogs } from './pages/ActivityLogs';
+import { AdminManagement } from './pages/AdminManagement';
+import { EngineerTransfer } from './pages/EngineerTransfer';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -235,6 +238,39 @@ function App() {
                     <ProtectedRoute requireAdmin>
                       <Layout>
                         <UserManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Activity Logs - Admin only */}
+                <Route
+                  path="/activity-logs"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <ActivityLogs />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Admin Management - Super Admin only */}
+                <Route
+                  path="/admin-management"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <AdminManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Engineer Transfer - Admin only */}
+                <Route
+                  path="/engineer-transfer"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <EngineerTransfer />
                       </Layout>
                     </ProtectedRoute>
                   }
