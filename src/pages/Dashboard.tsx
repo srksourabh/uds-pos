@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -14,7 +14,11 @@ import {
   Map as MapIcon,
   Shield,
   Settings,
-  ArrowRight
+  ArrowRight,
+  Store,
+  Warehouse,
+  Truck,
+  ArrowRightLeft
 } from 'lucide-react';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
 import { DeviceDistributionChart } from '../components/charts/DeviceDistributionChart';
@@ -31,6 +35,8 @@ interface DashboardStats {
   pendingCalls: number;
   completedToday: number;
   totalEngineers: number;
+  totalMerchants: number;
+  totalWarehouses: number;
 }
 
 interface MapEngineer {
@@ -59,6 +65,7 @@ interface MapCall {
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { profile, isAdmin, isSuperAdmin } = useAuth();
   const isEngineer = profile?.role === 'engineer';
   const [stats, setStats] = useState<DashboardStats>({
@@ -71,6 +78,8 @@ export function Dashboard() {
     pendingCalls: 0,
     completedToday: 0,
     totalEngineers: 0,
+    totalMerchants: 0,
+    totalWarehouses: 0,
   });
   const [loading, setLoading] = useState(true);
   const [callsTrendData, setCallsTrendData] = useState<any[]>([]);
@@ -81,14 +90,11 @@ export function Dashboard() {
   const [mapCalls, setMapCalls] = useState<MapCall[]>([]);
   const [showMap, setShowMap] = useState(true);
 
-  // Wait for auth to be ready before loading data
   useEffect(() => {
-    // Don't load until we know the user's role (profile must be loaded)
     if (profile === null) {
       return;
     }
 
-    // Capture current isAdmin value for this effect run
     const currentIsAdmin = isAdmin;
 
     loadDashboardStats(currentIsAdmin);
@@ -128,26 +134,13 @@ export function Dashboard() {
 
   const loadDashboardStats = async (adminAccess: boolean = isAdmin) => {
     try {
-      const [devicesRes, callsRes, engineersRes] = await Promise.all([
+      const [devicesRes, callsRes, engineersRes, merchantsRes, warehousesRes] = await Promise.all([
         supabase.from('devices').select('status'),
         supabase.from('calls').select('status, completed_at'),
-        adminAccess ? supabase.from('user_profiles').select('id').eq('role', 'engineer') : Promise.resolve({ data: [] })
+        adminAccess ? supabase.from('user_profiles').select('id').eq('role', 'engineer') : Promise.resolve({ data: [] }),
+        supabase.from('merchants').select('id').eq('status', 'active'),
+        supabase.from('warehouses').select('id').eq('is_active', true)
       ]);
-
-      // Debug logging for development
-      if (import.meta.env.DEV) {
-        console.log('[Dashboard] Query results:', {
-          devices: { data: devicesRes.data?.length, error: devicesRes.error },
-          calls: { data: callsRes.data?.length, error: callsRes.error },
-          engineers: { data: engineersRes.data?.length, error: (engineersRes as any).error },
-          adminAccess
-        });
-      }
-
-      // Log any errors
-      if (devicesRes.error) console.error('[Dashboard] Devices query error:', devicesRes.error);
-      if (callsRes.error) console.error('[Dashboard] Calls query error:', callsRes.error);
-      if ((engineersRes as any).error) console.error('[Dashboard] Engineers query error:', (engineersRes as any).error);
 
       const devices = devicesRes.data || [];
       const calls = callsRes.data || [];
@@ -169,6 +162,8 @@ export function Dashboard() {
           new Date(c.completed_at) >= today
         ).length,
         totalEngineers: engineersRes.data?.length || 0,
+        totalMerchants: merchantsRes.data?.length || 0,
+        totalWarehouses: warehousesRes.data?.length || 0,
       });
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
@@ -245,19 +240,16 @@ export function Dashboard() {
 
   const loadMapData = async () => {
     try {
-      // Load engineers with location data
       const { data: engineers } = await supabase
         .from('user_profiles')
         .select('id, full_name, last_location_lat, last_location_lng, phone, active, last_location_updated_at')
         .eq('role', 'engineer');
 
-      // Load active calls with location data
       const { data: calls } = await supabase
         .from('calls')
         .select('id, call_number, type, status, priority, client_name, client_address, latitude, longitude, assigned_engineer, scheduled_date')
         .in('status', ['pending', 'assigned', 'in_progress']);
 
-      // Count active calls per engineer
       const engineerCallCounts = new Map<string, number>();
       (calls || []).forEach(call => {
         if (call.assigned_engineer) {
@@ -308,76 +300,93 @@ export function Dashboard() {
     );
   }
 
+  // Clickable stat cards with navigation
   const statCards = [
     {
       title: 'Total Devices',
       value: stats.totalDevices,
       icon: Smartphone,
-      color: 'blue',
       bgColor: 'bg-blue-500',
+      link: '/devices',
     },
     {
-      title: 'Warehouse',
+      title: 'In Warehouse',
       value: stats.warehouseDevices,
       icon: Package,
-      color: 'gray',
       bgColor: 'bg-gray-500',
+      link: '/devices?status=warehouse',
     },
     {
-      title: 'Issued',
+      title: 'Issued to Engineers',
       value: stats.issuedDevices,
       icon: TrendingUp,
-      color: 'yellow',
       bgColor: 'bg-yellow-500',
+      link: '/devices?status=issued',
     },
     {
       title: 'Installed',
       value: stats.installedDevices,
       icon: CheckCircle,
-      color: 'green',
       bgColor: 'bg-green-500',
+      link: '/devices?status=installed',
     },
     {
       title: 'Faulty',
       value: stats.faultyDevices,
       icon: AlertTriangle,
-      color: 'red',
       bgColor: 'bg-red-500',
+      link: '/devices?status=faulty',
     },
     {
       title: 'Active Calls',
       value: stats.activeCalls,
       icon: ClipboardList,
-      color: 'blue',
       bgColor: 'bg-blue-500',
+      link: '/calls',
     },
     {
-      title: 'Pending',
+      title: 'Pending Calls',
       value: stats.pendingCalls,
       icon: Clock,
-      color: 'orange',
       bgColor: 'bg-orange-500',
+      link: '/calls?status=pending',
     },
     {
       title: 'Completed Today',
       value: stats.completedToday,
       icon: CheckCircle,
-      color: 'green',
       bgColor: 'bg-green-500',
+      link: '/calls?status=completed',
     },
   ];
 
+  // Add admin-only cards
   if (isAdmin) {
-    statCards.push({
-      title: 'Total Engineers',
-      value: stats.totalEngineers,
-      icon: Users,
-      color: 'purple',
-      bgColor: 'bg-purple-500',
-    });
+    statCards.push(
+      {
+        title: 'Engineers',
+        value: stats.totalEngineers,
+        icon: Users,
+        bgColor: 'bg-purple-500',
+        link: '/engineers',
+      },
+      {
+        title: 'Merchants',
+        value: stats.totalMerchants,
+        icon: Store,
+        bgColor: 'bg-indigo-500',
+        link: '/merchants',
+      },
+      {
+        title: 'Warehouses',
+        value: stats.totalWarehouses,
+        icon: Warehouse,
+        bgColor: 'bg-teal-500',
+        link: '/warehouses',
+      }
+    );
   }
 
-  // Role-based welcome message
   const getRoleLabel = () => {
     if (isSuperAdmin) return 'Super Administrator';
     if (isAdmin) return 'Administrator';
@@ -409,6 +418,60 @@ export function Dashboard() {
           {getRoleDescription()}
         </p>
       </div>
+
+      {/* Quick Action Buttons */}
+      {isAdmin && (
+        <div className="mb-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <Link
+            to="/stock-transfer"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white hover:from-blue-700 hover:to-blue-800 transition group"
+          >
+            <ArrowRightLeft className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Stock Transfer</h3>
+            <p className="text-blue-200 text-xs">Move devices</p>
+          </Link>
+          <Link
+            to="/calls"
+            className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-4 text-white hover:from-green-700 hover:to-green-800 transition group"
+          >
+            <ClipboardList className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Service Calls</h3>
+            <p className="text-green-200 text-xs">Manage calls</p>
+          </Link>
+          <Link
+            to="/devices"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-4 text-white hover:from-purple-700 hover:to-purple-800 transition group"
+          >
+            <Smartphone className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Devices</h3>
+            <p className="text-purple-200 text-xs">View all devices</p>
+          </Link>
+          <Link
+            to="/merchants"
+            className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl p-4 text-white hover:from-indigo-700 hover:to-indigo-800 transition group"
+          >
+            <Store className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Merchants</h3>
+            <p className="text-indigo-200 text-xs">View merchants</p>
+          </Link>
+          <Link
+            to="/warehouses"
+            className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-4 text-white hover:from-teal-700 hover:to-teal-800 transition group"
+          >
+            <Warehouse className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Warehouses</h3>
+            <p className="text-teal-200 text-xs">Manage locations</p>
+          </Link>
+          <Link
+            to="/stock-movements"
+            className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl p-4 text-white hover:from-orange-700 hover:to-orange-800 transition group"
+          >
+            <Truck className="w-6 h-6 mb-2" />
+            <h3 className="font-semibold">Movements</h3>
+            <p className="text-orange-200 text-xs">Audit trail</p>
+          </Link>
+        </div>
+      )}
 
       {/* Super Admin Quick Actions */}
       {isSuperAdmin && (
@@ -487,24 +550,30 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* Clickable Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div
+            <button
               key={stat.title}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              onClick={() => navigate(stat.link)}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all text-left group"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-sm font-medium text-gray-600 group-hover:text-blue-600 transition">{stat.title}</p>
                   <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
                 </div>
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                <div className={`${stat.bgColor} p-3 rounded-lg group-hover:scale-110 transition`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
-            </div>
+              <div className="mt-3 flex items-center text-xs text-gray-400 group-hover:text-blue-500 transition">
+                <span>View details</span>
+                <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition" />
+              </div>
+            </button>
           );
         })}
       </div>
