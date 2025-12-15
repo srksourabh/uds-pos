@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X } from 'lucide-react';
+import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X, Building2 } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 import { CreateCallModal } from '../components/CreateCallModal';
-import { CSVUpload } from '../components/CSVUpload';
+import { CallImportModal } from '../components/CallImportModal';
+import { useAuth } from '../contexts/AuthContext';
+import { buildLocationFilter } from '../lib/locationAccess';
 
 type Call = Database['public']['Tables']['calls']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
@@ -13,12 +15,25 @@ type Call = Database['public']['Tables']['calls']['Row'] & {
 
 export function Calls() {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [calls, setCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [cityFilter, setCityFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [locationInfo, setLocationInfo] = useState<{
+    isSuperAdmin: boolean;
+    cities: string[];
+  }>({ isSuperAdmin: false, cities: [] });
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      loadLocationFilter();
+    }
+  }, [userProfile?.id]);
 
   useEffect(() => {
     loadCalls();
@@ -31,11 +46,21 @@ export function Calls() {
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [locationInfo]);
+
+  const loadLocationFilter = async () => {
+    if (!userProfile?.id) return;
+    
+    const filter = await buildLocationFilter(userProfile.id);
+    setLocationInfo({
+      isSuperAdmin: filter.isSuperAdmin,
+      cities: filter.cities
+    });
+  };
 
   const loadCalls = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('calls')
         .select(`
           *,
@@ -44,8 +69,20 @@ export function Calls() {
         `)
         .order('scheduled_date', { ascending: false });
 
+      // Apply location filter if not super admin
+      if (!locationInfo.isSuperAdmin && locationInfo.cities.length > 0) {
+        // Filter by cities the user has access to
+        query = query.in('city', locationInfo.cities.map(c => c.toUpperCase()));
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       setCalls(data as Call[]);
+      
+      // Extract unique cities for filter
+      const cities = [...new Set(data?.map(c => c.city).filter(Boolean))] as string[];
+      setAvailableCities(cities.sort());
     } catch (error) {
       console.error('Error loading calls:', error);
     } finally {
@@ -57,9 +94,12 @@ export function Calls() {
     const matchesSearch =
       call.call_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       call.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      call.client_address.toLowerCase().includes(searchTerm.toLowerCase());
+      call.client_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (call.mid && call.mid.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (call.tid && call.tid.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || call.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesCity = cityFilter === 'all' || call.city?.toUpperCase() === cityFilter.toUpperCase();
+    return matchesSearch && matchesStatus && matchesCity;
   });
 
   const statusColors: Record<string, string> = {
@@ -85,6 +125,15 @@ export function Calls() {
     urgent: 'text-red-600',
   };
 
+  // Count by status
+  const statusCounts = {
+    all: calls.length,
+    pending: calls.filter(c => c.status === 'pending').length,
+    assigned: calls.filter(c => c.status === 'assigned').length,
+    in_progress: calls.filter(c => c.status === 'in_progress').length,
+    completed: calls.filter(c => c.status === 'completed').length,
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -98,15 +147,22 @@ export function Calls() {
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Calls</h1>
-          <p className="text-gray-600 mt-2">Manage field service calls and assignments</p>
+          <p className="text-gray-600 mt-2">
+            Manage field service calls and assignments
+            {!locationInfo.isSuperAdmin && locationInfo.cities.length > 0 && (
+              <span className="ml-2 text-sm text-blue-600">
+                (Showing: {locationInfo.cities.slice(0, 3).join(', ')}{locationInfo.cities.length > 3 ? ` +${locationInfo.cities.length - 3} more` : ''})
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowCSVUpload(true)}
-            className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
             <Upload className="w-5 h-5 mr-2" />
-            Import CSV
+            Import Calls
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -118,13 +174,31 @@ export function Calls() {
         </div>
       </div>
 
+      {/* Status Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        {Object.entries(statusCounts).map(([status, count]) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`p-4 rounded-xl border transition-all ${
+              statusFilter === status 
+                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="text-2xl font-bold text-gray-900">{count}</div>
+            <div className="text-sm text-gray-600 capitalize">{status === 'all' ? 'Total' : status.replace('_', ' ')}</div>
+          </button>
+        ))}
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by call number, client name, or address..."
+              placeholder="Search by call number, client, MID, TID, or address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -145,6 +219,19 @@ export function Calls() {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+          <div className="flex items-center gap-2">
+            <Building2 className="text-gray-400 w-5 h-5" />
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="all">All Cities</option>
+              {availableCities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -153,34 +240,51 @@ export function Calls() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-600">No calls found</p>
+            {!locationInfo.isSuperAdmin && locationInfo.cities.length === 0 && (
+              <p className="text-sm text-gray-400 mt-2">
+                You may not have location access configured. Contact your administrator.
+              </p>
+            )}
           </div>
         ) : (
           filteredCalls.map((call) => (
             <div
               key={call.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer"
+              onClick={() => navigate(`/calls/${call.id}`)}
             >
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-start gap-3 mb-3">
                     <ClipboardList className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-gray-900">{call.call_number}</span>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 font-mono">{call.call_number}</span>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${typeColors[call.type]}`}>
                           {call.type}
                         </span>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusColors[call.status]}`}>
                           {call.status.replace('_', ' ')}
                         </span>
-                        <span className={`text-xs font-semibold uppercase ${priorityColors[call.priority]}`}>
+                        <span className={`text-xs font-semibold uppercase ${priorityColors[call.priority || 'medium']}`}>
                           {call.priority}
                         </span>
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">{call.client_name}</h3>
+                      {(call.mid || call.tid) && (
+                        <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
+                          {call.mid && <span>MID: <span className="font-mono">{call.mid}</span></span>}
+                          {call.tid && <span>TID: <span className="font-mono">{call.tid}</span></span>}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                         <MapPin className="w-4 h-4" />
                         <span>{call.client_address}</span>
+                        {call.city && (
+                          <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-medium">
+                            {call.city}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
@@ -203,7 +307,10 @@ export function Calls() {
                     <p className="font-medium text-gray-900">{call.engineer?.full_name || 'Unassigned'}</p>
                   </div>
                   <button
-                    onClick={() => navigate(`/calls/${call.id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/calls/${call.id}`);
+                    }}
                     className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
                   >
                     View Details
@@ -230,32 +337,13 @@ export function Calls() {
         }}
       />
 
-      {/* CSV Upload Modal */}
-      {showCSVUpload && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Import Calls from CSV</h2>
-              <button
-                onClick={() => setShowCSVUpload(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
-              <CSVUpload
-                onComplete={(results) => {
-                  const successCount = results.filter(r => r.success).length;
-                  if (successCount > 0) {
-                    loadCalls();
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <CallImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          loadCalls();
+        }}
+      />
     </div>
   );
 }

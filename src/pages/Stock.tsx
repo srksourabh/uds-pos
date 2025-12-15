@@ -1,384 +1,324 @@
-import { useState, useEffect } from 'react';
-import { useDevices, useIssueDevices, useMarkDeviceFaulty } from '../lib/api-hooks';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Package, Search, Upload, AlertTriangle, X } from 'lucide-react';
+import { Search, Filter, Package, Plus, ArrowRight, AlertTriangle, Download, Upload, Building2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AddDeviceModal } from '../components/AddDeviceModal';
+import { StockReceiveModal } from '../components/StockReceiveModal';
 import { useAuth } from '../contexts/AuthContext';
 
+interface Device {
+  id: string;
+  serial_number: string;
+  make: string | null;
+  model: string | null;
+  status: string;
+  device_condition: string | null;
+  current_location_type: string | null;
+  current_location_name: string | null;
+  tid: string | null;
+  assigned_to: string | null;
+  office_id: string | null;
+  created_at: string;
+  engineer?: {
+    id: string;
+    full_name: string;
+  } | null;
+  office?: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
+}
+
+interface Warehouse {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export function Stock() {
-  const { isAdmin } = useAuth();
-  const [filters, setFilters] = useState({
-    status: 'all',
-    bank: 'all',
-    assignedTo: 'all',
-    search: '',
-  });
-
-  const { data: devices, loading } = useDevices(filters);
-  const { issueDevices, loading: issuing } = useIssueDevices();
-  const { markFaulty } = useMarkDeviceFaulty();
-
-  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
-  const [showIssueModal, setShowIssueModal] = useState(false);
-  const [showFaultyModal, setShowFaultyModal] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<any>(null);
-
-  const [banks, setBanks] = useState<any[]>([]);
-  const [engineers, setEngineers] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('banks').select('*'),
-      supabase.from('user_profiles').select('*').eq('role', 'engineer')
-    ]).then(([banksRes, engineersRes]) => {
-      setBanks(banksRes.data || []);
-      setEngineers(engineersRes.data || []);
-    });
+    loadDevices();
+    loadWarehouses();
+
+    const channel = supabase
+      .channel('devices-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, loadDevices)
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
-  const handleSelectDevice = (deviceId: string) => {
-    setSelectedDevices(prev =>
-      prev.includes(deviceId)
-        ? prev.filter(id => id !== deviceId)
-        : [...prev, deviceId]
-    );
+  const loadWarehouses = async () => {
+    const { data } = await supabase
+      .from('warehouses')
+      .select('id, name, code')
+      .eq('is_active', true)
+      .order('name');
+    if (data) setWarehouses(data);
   };
 
-  const handleSelectAll = () => {
-    if (selectedDevices.length === devices.length) {
-      setSelectedDevices([]);
-    } else {
-      setSelectedDevices(devices.map((d: any) => d.id));
-    }
-  };
-
-  const handleIssueDevices = async (engineerId: string) => {
+  const loadDevices = async () => {
     try {
-      await issueDevices({
-        deviceIds: selectedDevices,
-        engineerId,
-      });
-      setSelectedDevices([]);
-      setShowIssueModal(false);
-      alert('Devices issued successfully');
-    } catch (error: any) {
-      alert(`Error: ${error.error || error.message}`);
+      const { data, error } = await supabase
+        .from('devices')
+        .select(`
+          *,
+          engineer:assigned_to(id, full_name),
+          office:office_id(id, name, code)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setDevices(data as Device[]);
+    } catch (error) {
+      console.error('Error loading devices:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMarkFaulty = async (data: any) => {
-    try {
-      await markFaulty({
-        deviceId: selectedDevice.id,
-        ...data,
-      });
-      setShowFaultyModal(false);
-      setSelectedDevice(null);
-      alert('Device marked as faulty');
-    } catch (error: any) {
-      alert(`Error: ${error.error || error.message}`);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      warehouse: 'bg-gray-100 text-gray-800',
-      issued: 'bg-blue-100 text-blue-800',
-      installed: 'bg-green-100 text-green-800',
-      faulty: 'bg-red-100 text-red-800',
-      in_transit: 'bg-yellow-100 text-yellow-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
-          <p className="text-gray-600 mt-1">Manage device inventory and stock movements</p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <button
-              disabled={selectedDevices.length === 0}
-              onClick={() => setShowIssueModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Issue Selected ({selectedDevices.length})
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by serial or model..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Status</option>
-            <option value="warehouse">Warehouse</option>
-            <option value="issued">Issued</option>
-            <option value="installed">Installed</option>
-            <option value="faulty">Faulty</option>
-            <option value="in_transit">In Transit</option>
-          </select>
-
-          <select
-            value={filters.bank}
-            onChange={(e) => setFilters({ ...filters, bank: e.target.value })}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Banks</option>
-            {banks.map(bank => (
-              <option key={bank.id} value={bank.id}>{bank.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading devices...</p>
-          </div>
-        ) : devices.length === 0 ? (
-          <div className="p-8 text-center">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No devices found</p>
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {isAdmin && (
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedDevices.length === devices.length}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300"
-                    />
-                  </th>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bank</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {devices.map((device: any) => (
-                <tr key={device.id} className="hover:bg-gray-50">
-                  {isAdmin && (
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedDevices.includes(device.id)}
-                        onChange={() => handleSelectDevice(device.id)}
-                        className="rounded border-gray-300"
-                      />
-                    </td>
-                  )}
-                  <td className="px-6 py-4 font-medium text-gray-900">{device.serial_number}</td>
-                  <td className="px-6 py-4 text-gray-600">{device.model}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(device.status)}`}>
-                      {device.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{device.banks?.code}</td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">
-                    {device.installed_at_client || device.assigned_to || 'Warehouse'}
-                  </td>
-                  <td className="px-6 py-4">
-                    {device.status !== 'faulty' && (
-                      <button
-                        onClick={() => {
-                          setSelectedDevice(device);
-                          setShowFaultyModal(true);
-                        }}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                        Mark Faulty
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {showIssueModal && <IssueDevicesModal
-        engineers={engineers}
-        onClose={() => setShowIssueModal(false)}
-        onSubmit={handleIssueDevices}
-        loading={issuing}
-      />}
-
-      {showFaultyModal && <MarkFaultyModal
-        device={selectedDevice}
-        onClose={() => {
-          setShowFaultyModal(false);
-          setSelectedDevice(null);
-        }}
-        onSubmit={handleMarkFaulty}
-      />}
-    </div>
-  );
-}
-
-function IssueDevicesModal({ engineers, onClose, onSubmit, loading }: any) {
-  const [engineerId, setEngineerId] = useState('');
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Issue Devices to Engineer</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Engineer</label>
-            <select
-              value={engineerId}
-              onChange={(e) => setEngineerId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Choose an engineer...</option>
-              {engineers.map((eng: any) => (
-                <option key={eng.user_id} value={eng.user_id}>
-                  {eng.full_name} - {eng.banks?.bank_code}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onSubmit(engineerId)}
-              disabled={!engineerId || loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Issuing...' : 'Issue Devices'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MarkFaultyModal({ device, onClose, onSubmit }: any) {
-  const [formData, setFormData] = useState({
-    faultDescription: '',
-    faultCategory: 'Hardware',
-    severity: 'minor',
-    requiresRepair: true,
-    estimatedCost: 0,
+  const filteredDevices = devices.filter((device) => {
+    const matchesSearch =
+      device.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.tid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.model?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
+    const matchesWarehouse = warehouseFilter === 'all' || device.office_id === warehouseFilter;
+    return matchesSearch && matchesStatus && matchesWarehouse;
   });
 
+  const statusColors: Record<string, string> = {
+    warehouse: 'bg-blue-100 text-blue-800',
+    issued: 'bg-yellow-100 text-yellow-800',
+    installed: 'bg-green-100 text-green-800',
+    faulty: 'bg-red-100 text-red-800',
+    returned: 'bg-gray-100 text-gray-800',
+  };
+
+  const conditionColors: Record<string, string> = {
+    new: 'bg-emerald-100 text-emerald-700',
+    good: 'bg-blue-100 text-blue-700',
+    fair: 'bg-yellow-100 text-yellow-700',
+    faulty: 'bg-red-100 text-red-700',
+    damaged: 'bg-red-100 text-red-700',
+  };
+
+  // Count by status
+  const statusCounts = {
+    all: devices.length,
+    warehouse: devices.filter(d => d.status === 'warehouse').length,
+    issued: devices.filter(d => d.status === 'issued').length,
+    installed: devices.filter(d => d.status === 'installed').length,
+    faulty: devices.filter(d => d.status === 'faulty').length,
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Mark Device as Faulty</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
+    <div>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Stock Management</h1>
+          <p className="text-gray-600 mt-2">Manage POS devices and inventory</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowReceiveModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Receive Stock
+          </button>
+          <button
+            onClick={() => navigate('/stock-transfer')}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+          >
+            <ArrowRight className="w-5 h-5 mr-2" />
+            Transfer
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Device
           </button>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600">Device: {device?.serial_number}</p>
-          </div>
+      {/* Status Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        {Object.entries(statusCounts).map(([status, count]) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`p-4 rounded-xl border transition-all ${
+              statusFilter === status 
+                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <div className="text-2xl font-bold text-gray-900">{count}</div>
+            <div className="text-sm text-gray-600 capitalize">{status === 'all' ? 'Total' : status}</div>
+          </button>
+        ))}
+      </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fault Description*</label>
-            <textarea
-              value={formData.faultDescription}
-              onChange={(e) => setFormData({ ...formData, faultDescription: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe the fault in detail (min 20 characters)..."
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search by serial number, TID, make, or model..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category*</label>
+          <div className="flex items-center gap-2">
+            <Filter className="text-gray-400 w-5 h-5" />
             <select
-              value={formData.faultCategory}
-              onChange={(e) => setFormData({ ...formData, faultCategory: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
-              <option value="Hardware">Hardware</option>
-              <option value="Software">Software</option>
-              <option value="Physical Damage">Physical Damage</option>
-              <option value="Other">Other</option>
+              <option value="all">All Status</option>
+              <option value="warehouse">Warehouse</option>
+              <option value="issued">Issued</option>
+              <option value="installed">Installed</option>
+              <option value="faulty">Faulty</option>
+              <option value="returned">Returned</option>
             </select>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Severity*</label>
+          <div className="flex items-center gap-2">
+            <Building2 className="text-gray-400 w-5 h-5" />
             <select
-              value={formData.severity}
-              onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              value={warehouseFilter}
+              onChange={(e) => setWarehouseFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
-              <option value="minor">Minor</option>
-              <option value="major">Major</option>
-              <option value="critical">Critical</option>
+              <option value="all">All Warehouses</option>
+              {warehouses.map(wh => (
+                <option key={wh.id} value={wh.id}>{wh.name} ({wh.code})</option>
+              ))}
             </select>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onSubmit(formData)}
-              disabled={formData.faultDescription.length < 20}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-            >
-              Mark as Faulty
-            </button>
           </div>
         </div>
       </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredDevices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500">No devices found</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredDevices.map((device) => (
+                  <tr key={device.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Package className="w-5 h-5 text-gray-400 mr-3" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 font-mono">{device.serial_number}</div>
+                          <div className="text-sm text-gray-500">{device.make} {device.model}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-mono text-gray-600">{device.tid || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[device.status]}`}>
+                        {device.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {device.device_condition ? (
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${conditionColors[device.device_condition] || 'bg-gray-100 text-gray-700'}`}>
+                          {device.device_condition}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {device.office?.name || device.current_location_name || '-'}
+                      </div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {device.current_location_type || ''}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {device.engineer?.full_name || '-'}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Showing {filteredDevices.length} of {devices.length} devices
+        </p>
+      </div>
+
+      <AddDeviceModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          loadDevices();
+          setShowAddModal(false);
+        }}
+      />
+
+      <StockReceiveModal
+        isOpen={showReceiveModal}
+        onClose={() => setShowReceiveModal(false)}
+        onSuccess={() => {
+          loadDevices();
+        }}
+      />
     </div>
   );
 }
