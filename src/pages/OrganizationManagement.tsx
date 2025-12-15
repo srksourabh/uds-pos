@@ -3,8 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Users, Search, Building2, ChevronRight, ChevronDown, Check, X, 
-  Edit2, Save, RefreshCw, User, UserPlus, Briefcase, GitBranch,
-  ArrowRight, AlertTriangle
+  Edit2, Save, RefreshCw, User, Briefcase, GitBranch
 } from 'lucide-react';
 
 type UserProfile = {
@@ -18,6 +17,7 @@ type UserProfile = {
   office_id: string;
   phone: string;
   emp_id: string;
+  map_id: string;
   status: string;
   manager?: UserProfile;
   subordinates?: UserProfile[];
@@ -67,22 +67,22 @@ export function OrganizationManagement() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load hierarchy levels
+      // Load hierarchy levels - order by level DESC (L6 at top, L1 at bottom)
       const { data: levels } = await supabase
         .from('hierarchy_levels')
         .select('*')
-        .order('level');
+        .order('level', { ascending: false });
       
       setHierarchyLevels(levels || []);
 
-      // Load all users with their office info
+      // Load all users with their office info - order by level DESC then name
       const { data: usersData } = await supabase
         .from('user_profiles')
         .select(`
           *,
           office:office_id(name, code)
         `)
-        .order('hierarchy_level, full_name');
+        .order('hierarchy_level', { ascending: false });
 
       // Build hierarchy relationships
       const usersWithRelations = (usersData || []).map(u => {
@@ -128,7 +128,7 @@ export function OrganizationManagement() {
         .update({
           department_new: editDepartment || null,
           reports_to: editReportsTo || null,
-          hierarchy_level: level?.level || 6
+          hierarchy_level: level?.level || 1
         })
         .eq('id', selectedUser.id);
 
@@ -164,10 +164,10 @@ export function OrganizationManagement() {
     const userLevel = hierarchyLevels.find(h => h.department === userDept);
     if (!userLevel) return [];
 
-    // Get users at higher levels (lower level number)
+    // Get users at higher levels (higher level number = higher authority)
     return users.filter(u => {
       const managerLevel = hierarchyLevels.find(h => h.department === u.department_new);
-      return managerLevel && managerLevel.level < userLevel.level;
+      return managerLevel && managerLevel.level > userLevel.level;
     });
   };
 
@@ -190,14 +190,15 @@ export function OrganizationManagement() {
     const matchesSearch = 
       u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.emp_id?.toLowerCase().includes(searchTerm.toLowerCase());
+      u.emp_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.map_id?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDept = filterDepartment === 'all' || u.department_new === filterDepartment;
     
     return matchesSearch && matchesDept;
   });
 
-  // Get top-level users (no manager) for tree view
+  // Get top-level users (no manager) for tree view - those with highest level
   const topLevelUsers = users.filter(u => !u.reports_to && (u.role === 'super_admin' || u.department_new === 'super_admin'));
 
   const renderTreeNode = (user: UserProfile, depth: number = 0) => {
@@ -232,7 +233,7 @@ export function OrganizationManagement() {
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">{user.full_name}</span>
               <span className={`px-2 py-0.5 text-xs rounded-full border ${departmentColors[user.department_new] || 'bg-gray-100 text-gray-600'}`}>
-                {getDepartmentDisplay(user.department_new)}
+                L{user.hierarchy_level} - {getDepartmentDisplay(user.department_new)}
               </span>
             </div>
             <p className="text-xs text-gray-500">{user.email}</p>
@@ -313,7 +314,7 @@ export function OrganizationManagement() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <GitBranch className="w-5 h-5" />
-          Hierarchy Levels
+          Hierarchy Levels (L6 = Highest, L1 = Entry)
         </h2>
         <div className="flex flex-wrap gap-2">
           {hierarchyLevels.map(level => (
@@ -326,12 +327,13 @@ export function OrganizationManagement() {
           ))}
         </div>
         <div className="mt-4 text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
-          <div>• <strong>Super Admin</strong> → Senior Managers</div>
-          <div>• <strong>Senior Manager</strong> → Managers, Stock Managers</div>
-          <div>• <strong>Manager</strong> → Senior Coordinators, Coordinators</div>
-          <div>• <strong>Stock Manager</strong> → Senior Coordinators, Stock Coordinators</div>
-          <div>• <strong>Coordinator</strong> → Engineers, Back Office Executives</div>
-          <div>• <strong>Stock Coordinator</strong> → Back Office Executives</div>
+          <div>• <strong>L6 Super Admin</strong> → Manages Senior Managers</div>
+          <div>• <strong>L5 Senior Manager</strong> → Manages Managers, Stock Managers</div>
+          <div>• <strong>L4 Manager</strong> → Manages Senior Coordinators, Coordinators</div>
+          <div>• <strong>L4 Stock Manager</strong> → Manages Senior Coordinators, Stock Coordinators</div>
+          <div>• <strong>L3 Senior Coordinator</strong> → Manages Coordinators</div>
+          <div>• <strong>L2 Coordinator</strong> → Manages Engineers, Back Office</div>
+          <div>• <strong>L1 Engineer / BOE</strong> → Entry Level</div>
         </div>
       </div>
 
@@ -348,7 +350,7 @@ export function OrganizationManagement() {
               onClick={() => setFilterDepartment(filterDepartment === level.department ? 'all' : level.department)}
             >
               <p className="text-2xl font-bold text-gray-900">{count}</p>
-              <p className="text-xs text-gray-500">{level.display_name}</p>
+              <p className="text-xs text-gray-500">L{level.level} - {level.display_name}</p>
             </div>
           );
         })}
@@ -361,7 +363,7 @@ export function OrganizationManagement() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by name, email, emp ID..."
+              placeholder="Search by name, email, emp ID, map ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -374,7 +376,7 @@ export function OrganizationManagement() {
           >
             <option value="all">All Departments</option>
             {hierarchyLevels.map(level => (
-              <option key={level.department} value={level.department}>{level.display_name}</option>
+              <option key={level.department} value={level.department}>L{level.level}: {level.display_name}</option>
             ))}
           </select>
         </div>
@@ -419,11 +421,13 @@ export function OrganizationManagement() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-gray-900">{u.full_name}</span>
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                            {u.emp_id}
-                          </span>
+                          {u.emp_id && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                              {u.emp_id}
+                            </span>
+                          )}
                           <span className={`px-2 py-0.5 text-xs rounded-full border ${departmentColors[u.department_new] || 'bg-gray-100 text-gray-600'}`}>
-                            {getDepartmentDisplay(u.department_new)}
+                            L{u.hierarchy_level} - {getDepartmentDisplay(u.department_new)}
                           </span>
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
@@ -510,7 +514,7 @@ export function OrganizationManagement() {
                         <option value="">Select Manager</option>
                         {getEligibleManagers(editDepartment).map(manager => (
                           <option key={manager.id} value={manager.id}>
-                            {manager.full_name} ({getDepartmentDisplay(manager.department_new)})
+                            {manager.full_name} (L{manager.hierarchy_level} - {getDepartmentDisplay(manager.department_new)})
                           </option>
                         ))}
                       </select>
@@ -554,7 +558,7 @@ export function OrganizationManagement() {
                     <h3 className="font-semibold text-gray-900 text-lg">{selectedUser.full_name}</h3>
                     <p className="text-sm text-gray-500">{selectedUser.email}</p>
                     <span className={`inline-block mt-2 px-3 py-1 text-sm rounded-full border ${departmentColors[selectedUser.department_new] || 'bg-gray-100 text-gray-600'}`}>
-                      {getDepartmentDisplay(selectedUser.department_new)}
+                      L{selectedUser.hierarchy_level} - {getDepartmentDisplay(selectedUser.department_new)}
                     </span>
                   </div>
 
@@ -563,6 +567,12 @@ export function OrganizationManagement() {
                       <span className="text-gray-500">Employee ID</span>
                       <span className="font-medium">{selectedUser.emp_id || '-'}</span>
                     </div>
+                    {selectedUser.map_id && (
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-500">Map ID</span>
+                        <span className="font-medium">{selectedUser.map_id}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-500">Office</span>
                       <span className="font-medium">{selectedUser.office?.name || '-'}</span>
@@ -594,7 +604,7 @@ export function OrganizationManagement() {
                           >
                             <span>{sub.full_name}</span>
                             <span className={`px-2 py-0.5 text-xs rounded ${departmentColors[sub.department_new] || 'bg-gray-100'}`}>
-                              {getDepartmentDisplay(sub.department_new)}
+                              L{sub.hierarchy_level}
                             </span>
                           </div>
                         ))}
