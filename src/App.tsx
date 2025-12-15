@@ -40,6 +40,7 @@ import { Warehouses } from './pages/Warehouses';
 import { ActivityLogs } from './pages/ActivityLogs';
 import { AdminManagement } from './pages/AdminManagement';
 import { EngineerTransfer } from './pages/EngineerTransfer';
+import { OrganizationManagement } from './pages/OrganizationManagement';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -271,6 +272,17 @@ function App() {
                     <ProtectedRoute requireAdmin>
                       <Layout>
                         <EngineerTransfer />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Organization Management - Super Admin only */}
+                <Route
+                  path="/organization"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <OrganizationManagement />
                       </Layout>
                     </ProtectedRoute>
                   }
