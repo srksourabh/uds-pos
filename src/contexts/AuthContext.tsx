@@ -44,35 +44,35 @@ const createTestProfile = (overrides: Partial<UserProfile>): UserProfile => ({
 });
 
 // Simple test accounts for easy testing
-// Login with: admin / admin  OR  test / test
+// Login with: super / super  OR  admin / admin  OR  engineer / engineer
 const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; profile: UserProfile }> = {
   'admin': {
     password: 'admin',
     user: {
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.test',
+      email: 'admin@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.test',
-      full_name: 'Test Admin',
+      email: 'admin@uds.com',
+      full_name: 'Admin User',
       phone: '+1234567890',
       role: 'admin',
     }),
   },
-  'test': {
-    password: 'test',
+  'engineer': {
+    password: 'engineer',
     user: {
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.test',
+      email: 'engineer@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.test',
+      email: 'engineer@uds.com',
       full_name: 'Test Engineer',
       phone: '+1234567891',
       role: 'engineer',
@@ -82,13 +82,13 @@ const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; pro
     password: 'super',
     user: {
       id: 'test-super-uuid-0003',
-      email: 'super@uds.test',
+      email: 'super@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-super-uuid-0003',
-      email: 'super@uds.test',
+      email: 'super@uds.com',
       full_name: 'Super Admin',
       phone: '+1234567892',
       role: 'super_admin',

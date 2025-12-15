@@ -33,8 +33,8 @@ export default function MobileLogin() {
     setLoading(true);
 
     try {
-      // Auto-append @test.com if no @ present
-      const email = username.includes('@') ? username : `${username}@test.com`;
+      // Auto-append @uds.com if no @ present
+      const email = username.includes('@') ? username : `${username}@uds.com`;
 
       debugLog('Attempting login with email:', email);
 
