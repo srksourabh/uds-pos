@@ -20,7 +20,10 @@ import {
   Truck,
   Warehouse,
   FileText,
-  Shield
+  Shield,
+  Activity,
+  UserCog,
+  Store
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -38,14 +41,18 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Calls', href: '/calls', icon: ClipboardList, module: MODULES.CALLS },
     { name: 'Devices', href: '/devices', icon: Smartphone, module: MODULES.DEVICES },
     { name: 'Stock', href: '/stock', icon: Warehouse, module: MODULES.STOCK },
+    { name: 'Merchants', href: '/merchants', icon: Store, module: MODULES.DASHBOARD, adminOnly: true },
+    { name: 'Warehouses', href: '/warehouses', icon: Building2, module: MODULES.DASHBOARD, adminOnly: true },
     { name: 'Alerts', href: '/alerts', icon: Bell, module: MODULES.ALERTS },
-    { name: 'Receive Stock', href: '/receive-stock', icon: PackagePlus, module: MODULES.RECEIVE_STOCK },
-    { name: 'In Transit', href: '/in-transit', icon: Truck, module: MODULES.IN_TRANSIT },
-    { name: 'Stock Movements', href: '/stock-movements', icon: ArrowRightLeft, module: MODULES.STOCK_MOVEMENTS },
+    { name: 'Stock Transfer', href: '/stock-transfer', icon: ArrowRightLeft, module: MODULES.STOCK_MOVEMENTS, adminOnly: true },
+    { name: 'Stock Movements', href: '/stock-movements', icon: Truck, module: MODULES.STOCK_MOVEMENTS },
+    { name: 'Activity Logs', href: '/activity-logs', icon: Activity, module: MODULES.DASHBOARD, adminOnly: true },
     { name: 'Engineers', href: '/engineers', icon: Users, module: MODULES.ENGINEERS, adminOnly: true },
+    { name: 'Engineer Transfer', href: '/engineer-transfer', icon: UserCog, module: MODULES.ENGINEERS, adminOnly: true },
     { name: 'Banks', href: '/banks', icon: Building2, module: MODULES.BANKS, adminOnly: true },
     { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
+    { name: 'Admin Management', href: '/admin-management', icon: Shield, module: MODULES.USER_MANAGEMENT, superAdminOnly: true },
     { name: 'User Management', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
   ];
 
@@ -53,6 +60,9 @@ export function Layout({ children }: LayoutProps) {
   const navigation = allNavItems.filter(item => {
     // Super admin sees everything
     if (isSuperAdmin) return true;
+
+    // Super admin only items
+    if (item.superAdminOnly) return false;
 
     // Admin-only items require admin role plus module access
     if (item.adminOnly && !isAdmin) return false;
@@ -79,11 +89,11 @@ export function Layout({ children }: LayoutProps) {
                 <div className="bg-blue-600 p-2 rounded-lg">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <span className="ml-3 text-xl font-bold text-gray-900">Field Service</span>
+                <span className="ml-3 text-xl font-bold text-gray-900">UDS-POS</span>
               </div>
 
-              <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
-                {navigation.map((item) => {
+              <div className="hidden sm:ml-8 sm:flex sm:space-x-2 overflow-x-auto">
+                {navigation.slice(0, 8).map((item) => {
                   const Icon = item.icon;
                   return (
                     <NavLink
@@ -91,18 +101,48 @@ export function Layout({ children }: LayoutProps) {
                       to={item.href}
                       end={item.href === '/dashboard'}
                       className={({ isActive }) =>
-                        `inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition ${
+                        `inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
                           isActive
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }`
                       }
                     >
-                      <Icon className="w-5 h-5 mr-2" />
+                      <Icon className="w-4 h-4 mr-1.5" />
                       {item.name}
                     </NavLink>
                   );
                 })}
+                {/* More dropdown for additional items */}
+                {navigation.length > 8 && (
+                  <div className="relative group">
+                    <button className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition">
+                      <Menu className="w-4 h-4 mr-1.5" />
+                      More
+                    </button>
+                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 hidden group-hover:block">
+                      {navigation.slice(8).map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <NavLink
+                            key={item.name}
+                            to={item.href}
+                            className={({ isActive }) =>
+                              `flex items-center px-4 py-2 text-sm ${
+                                isActive
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                              }`
+                            }
+                          >
+                            <Icon className="w-4 h-4 mr-2" />
+                            {item.name}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -118,7 +158,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{profile?.role}</p>
+                  <p className="text-xs text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
                 </div>
                 <button
                   onClick={handleSignOut}
@@ -142,7 +182,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-200">
+          <div className="sm:hidden border-t border-gray-200 max-h-[80vh] overflow-y-auto">
             <div className="pt-2 pb-3 space-y-1">
               {navigation.map((item) => {
                 const Icon = item.icon;
@@ -170,7 +210,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex items-center px-4 mb-3">
                 <div>
                   <p className="text-base font-medium text-gray-900">{profile?.full_name}</p>
-                  <p className="text-sm text-gray-500 capitalize">{profile?.role}</p>
+                  <p className="text-sm text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
                 </div>
               </div>
               <button
