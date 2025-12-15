@@ -16,14 +16,14 @@ import {
   X,
   Building2,
   ArrowRightLeft,
-  PackagePlus,
   Truck,
   Warehouse,
   FileText,
   Shield,
   Activity,
   UserCog,
-  Store
+  Store,
+  GitBranch
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -49,6 +49,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Activity Logs', href: '/activity-logs', icon: Activity, module: MODULES.DASHBOARD, adminOnly: true },
     { name: 'Engineers', href: '/engineers', icon: Users, module: MODULES.ENGINEERS, adminOnly: true },
     { name: 'Engineer Transfer', href: '/engineer-transfer', icon: UserCog, module: MODULES.ENGINEERS, adminOnly: true },
+    { name: 'Organization', href: '/organization', icon: GitBranch, module: MODULES.USER_MANAGEMENT, superAdminOnly: true },
     { name: 'Banks', href: '/banks', icon: Building2, module: MODULES.BANKS, adminOnly: true },
     { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
