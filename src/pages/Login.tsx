@@ -21,8 +21,8 @@ export function Login() {
     setLoading(true);
 
     try {
-      // Auto-append @test.com if no @ symbol (for easy testing)
-      const loginEmail = email.includes('@') ? email : `${email}@test.com`;
+      // Auto-append @uds.com if no @ symbol (for easy testing)
+      const loginEmail = email.includes('@') ? email : `${email}@uds.com`;
       await signIn(loginEmail, password);
       navigate('/dashboard');
     } catch (err) {
@@ -93,8 +93,8 @@ export function Login() {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              <strong>Test Accounts:</strong> superadmin / admin / engineer<br />
-              (Use the same word for password)
+              <strong>Test Accounts:</strong> super / admin / engineer<br />
+              (Password = same as username)
             </p>
           </div>
         </div>
