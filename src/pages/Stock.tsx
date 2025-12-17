@@ -320,8 +320,8 @@ function IssueDevicesModal({ engineers, onClose, onSubmit, loading }: any) {
             >
               <option value="">Choose an engineer...</option>
               {engineers.map((eng: any) => (
-                <option key={eng.user_id} value={eng.user_id}>
-                  {eng.full_name} - {eng.banks?.bank_code}
+                <option key={eng.id} value={eng.id}>
+                  {eng.full_name}
                 </option>
               ))}
             </select>

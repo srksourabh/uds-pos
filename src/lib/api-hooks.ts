@@ -476,7 +476,7 @@ export function useCalls(filters?: CallFilters) {
       try {
         let query = supabase
           .from('calls')
-          .select('*, banks(id, name, code), user_profiles(id, full_name, email)')
+          .select('*, banks!client_bank(id, name, code), user_profiles!assigned_engineer(id, full_name, email)')
           .order('created_at', { ascending: false });
 
         if (filters?.status && filters.status !== 'all') {
@@ -537,7 +537,7 @@ export function useDevices(filters?: DeviceFilters) {
     try {
       let query = supabase
         .from('devices')
-        .select('*, banks(id, name, code)')
+        .select('*, banks!device_bank(id, name, code)')
         .order('created_at', { ascending: false });
 
       if (filters?.status && filters.status !== 'all') {
@@ -596,7 +596,7 @@ export function useEngineers() {
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('*, banks(id, name, code)')
+          .select('*, banks!bank_id(id, name, code)')
           .eq('role', 'engineer')
           .order('full_name');
 
@@ -676,7 +676,7 @@ export function useDevicesQuery(filters?: DeviceFilters) {
     queryFn: async () => {
       let query = supabase
         .from('devices')
-        .select('*, banks(id, name, code)')
+        .select('*, banks!device_bank(id, name, code)')
         .order('created_at', { ascending: false });
 
       if (filters?.status && filters.status !== 'all') {
@@ -709,7 +709,7 @@ export function useCallsQuery(filters?: CallFilters) {
     queryFn: async () => {
       let query = supabase
         .from('calls')
-        .select('*, banks(id, name, code), user_profiles(id, full_name, email)')
+        .select('*, banks!client_bank(id, name, code), user_profiles!assigned_engineer(id, full_name, email)')
         .order('created_at', { ascending: false });
 
       if (filters?.status && filters.status !== 'all') {
