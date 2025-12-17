@@ -24,7 +24,7 @@ export function Login() {
       // Auto-append @uds.com if no @ symbol (for easy testing)
       const loginEmail = email.includes('@') ? email : `${email}@uds.com`;
       await signIn(loginEmail, password);
-      navigate('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('Invalid username or password');
     } finally {
@@ -100,7 +100,7 @@ export function Login() {
                 setLoading(true);
                 try {
                   await signIn('super@uds.com', 'super');
-                  navigate('/dashboard');
+                  window.location.href = '/dashboard';
                 } catch (err) {
                   setError('Login failed');
                 } finally {
@@ -120,7 +120,7 @@ export function Login() {
                 setLoading(true);
                 try {
                   await signIn('admin@uds.com', 'admin');
-                  navigate('/dashboard');
+                  window.location.href = '/dashboard';
                 } catch (err) {
                   setError('Login failed');
                 } finally {
@@ -140,7 +140,7 @@ export function Login() {
                 setLoading(true);
                 try {
                   await signIn('engineer@uds.com', 'engineer');
-                  navigate('/dashboard');
+                  window.location.href = '/dashboard';
                 } catch (err) {
                   setError('Login failed');
                 } finally {

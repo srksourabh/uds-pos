@@ -284,14 +284,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // Clear test user if present
-    localStorage.removeItem('test_user');
+    try {
+      // Clear test user if present
+      localStorage.removeItem('test_user');
 
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setUser(null);
-    setProfile(null);
-    setSession(null);
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear ALL localStorage (removes any cached data)
+      localStorage.clear();
+      
+      // Clear ALL sessionStorage
+      sessionStorage.clear();
+      
+      // Clear React state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      
+      // Force a hard reload to clear all cached React state and start fresh
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, clear everything and redirect
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      window.location.href = '/';
+    }
   };
 
   const reloadProfile = async () => {
