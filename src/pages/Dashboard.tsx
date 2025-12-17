@@ -210,13 +210,18 @@ export function Dashboard() {
       });
       setCallsTrendData(trendData);
 
+      // FIXED: Correct Supabase relationship syntax
       const { data: devices } = await supabase
         .from('devices')
-        .select('status, device_bank(name)');
+        .select(`
+          status,
+          banks!device_bank(name)
+        `);
 
       const bankMap = new Map<string, any>();
       (devices || []).forEach(device => {
-        const bankName = device.device_bank?.name || 'Unknown';
+        // FIXED: Access device.banks instead of device.device_bank
+        const bankName = device.banks?.name || 'Unknown';
         if (!bankMap.has(bankName)) {
           bankMap.set(bankName, { bank: bankName, warehouse: 0, issued: 0, installed: 0, faulty: 0 });
         }
