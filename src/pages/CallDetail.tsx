@@ -19,7 +19,7 @@ export function CallDetail() {
         const [callRes, devicesRes, photosRes] = await Promise.all([
           supabase
             .from('calls')
-            .select('*, banks(bank_code, bank_name), user_profiles(full_name, email, phone)')
+            .select('*, banks!client_bank(id, code, name), user_profiles!assigned_engineer(full_name, email, phone)')
             .eq('id', id)
             .single(),
           supabase
@@ -152,7 +152,7 @@ export function CallDetail() {
               <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Address</div>
-                <div className="font-medium text-gray-900">{call.installation_address}</div>
+                <div className="font-medium text-gray-900">{call.client_address}</div>
               </div>
             </div>
 
@@ -160,7 +160,7 @@ export function CallDetail() {
               <Package className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <div className="text-sm text-gray-500">Bank</div>
-                <div className="font-medium text-gray-900">{call.banks?.bank_name}</div>
+                <div className="font-medium text-gray-900">{call.banks?.name || 'N/A'}</div>
               </div>
             </div>
           </div>

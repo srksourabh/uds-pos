@@ -26,15 +26,16 @@ type Call = {
   fsp_center?: string;
   mid?: string;
   tid?: string;
-  banks?: { id: string; name: string; code: string };
-  user_profiles?: { id: string; full_name: string; phone: string | null };
+  description?: string;
+  banks?: { id: string; name: string; code: string } | null;
+  user_profiles?: { id: string; full_name: string; phone: string | null } | null;
 };
 
 type Engineer = {
   id: string;
   full_name: string;
   phone: string | null;
-  office_id: string | null;
+  bank_id?: string | null;
   role: string;
   status: string;
 };
@@ -94,7 +95,7 @@ export function CallManagement() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [callsRes, engineersRes, officesRes, customersRes] = await Promise.all([
+      const [callsRes, engineersRes, officesRes, banksRes] = await Promise.all([
         // FIXED: Correct Supabase relationship syntax
         supabase.from('calls').select(`
           *,
@@ -103,13 +104,14 @@ export function CallManagement() {
         `).order('created_at', { ascending: false }).limit(500),
         supabase.from('user_profiles').select('*').eq('role', 'engineer').eq('status', 'active'),
         supabase.from('warehouses').select('*').eq('active', true),
-        supabase.from('customers').select('*'),
+        supabase.from('banks').select('id, name, code').eq('active', true),
       ]);
 
       setCalls(callsRes.data || []);
       setEngineers(engineersRes.data || []);
       setOffices(officesRes.data || []);
-      setCustomers(customersRes.data || []);
+      // Use banks as customers (client_bank relationship)
+      setCustomers(banksRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

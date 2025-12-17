@@ -39,7 +39,6 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
           contact_phone: formData.contact_phone,
           address: formData.address,
           active: true,
-          is_active: true,
         });
 
       if (error) throw error;
@@ -214,7 +213,7 @@ export function Banks() {
     try {
       const { error } = await supabase
         .from('banks')
-        .update({ active: !currentStatus, is_active: !currentStatus })
+        .update({ active: !currentStatus })
         .eq('id', bankId);
 
       if (error) throw error;

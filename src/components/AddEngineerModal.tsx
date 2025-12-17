@@ -33,7 +33,7 @@ export function AddEngineerModal({ isOpen, onClose, onSuccess }: AddEngineerModa
       const { data, error } = await supabase
         .from('banks')
         .select('*')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
 
       if (error) throw error;
