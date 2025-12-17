@@ -91,11 +91,48 @@ export function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              <strong>Test Accounts:</strong> super / admin / engineer<br />
-              (Password = same as username)
-            </p>
+          {/* Quick Test Login Buttons */}
+          <div className="mt-6 space-y-3">
+            <p className="text-sm font-medium text-gray-700 text-center mb-3">Quick Test Login:</p>
+            
+            <button
+              onClick={() => {
+                setEmail('super');
+                setPassword('super');
+                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              }}
+              type="button"
+              className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              <Building2 className="w-5 h-5" />
+              Login as Super Admin
+            </button>
+            
+            <button
+              onClick={() => {
+                setEmail('admin');
+                setPassword('admin');
+                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              }}
+              type="button"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+            >
+              <Building2 className="w-5 h-5" />
+              Login as Admin
+            </button>
+            
+            <button
+              onClick={() => {
+                setEmail('engineer');
+                setPassword('engineer');
+                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              }}
+              type="button"
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
+            >
+              <Building2 className="w-5 h-5" />
+              Login as Engineer
+            </button>
           </div>
         </div>
       </div>
