@@ -96,42 +96,63 @@ export function Login() {
             <p className="text-sm font-medium text-gray-700 text-center mb-3">Quick Test Login:</p>
             
             <button
-              onClick={() => {
-                setEmail('super');
-                setPassword('super');
-                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await signIn('super@uds.com', 'super');
+                  navigate('/dashboard');
+                } catch (err) {
+                  setError('Login failed');
+                } finally {
+                  setLoading(false);
+                }
               }}
               type="button"
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Building2 className="w-5 h-5" />
-              Login as Super Admin
+              {loading ? 'Logging in...' : 'Login as Super Admin'}
             </button>
             
             <button
-              onClick={() => {
-                setEmail('admin');
-                setPassword('admin');
-                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await signIn('admin@uds.com', 'admin');
+                  navigate('/dashboard');
+                } catch (err) {
+                  setError('Login failed');
+                } finally {
+                  setLoading(false);
+                }
               }}
               type="button"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Building2 className="w-5 h-5" />
-              Login as Admin
+              {loading ? 'Logging in...' : 'Login as Admin'}
             </button>
             
             <button
-              onClick={() => {
-                setEmail('engineer');
-                setPassword('engineer');
-                setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await signIn('engineer@uds.com', 'engineer');
+                  navigate('/dashboard');
+                } catch (err) {
+                  setError('Login failed');
+                } finally {
+                  setLoading(false);
+                }
               }}
               type="button"
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Building2 className="w-5 h-5" />
-              Login as Engineer
+              {loading ? 'Logging in...' : 'Login as Engineer'}
             </button>
           </div>
         </div>
