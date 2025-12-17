@@ -130,7 +130,7 @@ export function ProfileSetup() {
             <div className="bg-green-100 p-3 rounded-full inline-block mb-4">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Created!</h2>
+            <h2 className="heading-2-responsive text-gray-900 mb-2">Profile Created!</h2>
             <p className="text-gray-600">
               Redirecting you to the approval status page...
             </p>
@@ -144,7 +144,7 @@ export function ProfileSetup() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="mb-6">
+          <div className="mb-responsive">
             <button
               onClick={handleBackToLogin}
               className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition"
@@ -158,12 +158,12 @@ export function ProfileSetup() {
             <div className="bg-blue-600 p-3 rounded-xl mb-4">
               <UserCircle className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome!</h1>
+            <h1 className="heading-1-responsive text-gray-900">Welcome!</h1>
             <p className="text-gray-600 mt-2">Let's set up your profile</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-responsive p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
@@ -171,7 +171,7 @@ export function ProfileSetup() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="fullName" className="form-label-responsive">
                 Full Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -186,7 +186,7 @@ export function ProfileSetup() {
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phone" className="form-label-responsive">
                 Phone Number
               </label>
               <input
@@ -204,7 +204,7 @@ export function ProfileSetup() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="form-label-responsive">
                 Email Address
               </label>
               <input

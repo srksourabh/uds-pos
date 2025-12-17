@@ -114,7 +114,7 @@ export function CallDetail() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{call.call_number}</h1>
+          <h1 className="heading-2-responsive text-gray-900">{call.call_number}</h1>
           <p className="text-gray-600">{call.call_type_display || call.call_type}</p>
         </div>
         <div className="flex gap-2">
@@ -127,9 +127,9 @@ export function CallDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid-responsive-2">
         <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Client Information</h2>
+          <h2 className="heading-3-responsive text-gray-900 border-b pb-2">Client Information</h2>
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -167,7 +167,7 @@ export function CallDetail() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Assignment Details</h2>
+          <h2 className="heading-3-responsive text-gray-900 border-b pb-2">Assignment Details</h2>
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -225,14 +225,14 @@ export function CallDetail() {
 
       {call.description && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Description</h2>
+          <h2 className="heading-3-responsive text-gray-900 border-b pb-2 mb-4">Description</h2>
           <p className="text-gray-700 whitespace-pre-wrap">{call.description}</p>
         </div>
       )}
 
       {call.resolution_notes && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Resolution Notes</h2>
+          <h2 className="heading-3-responsive text-gray-900 border-b pb-2 mb-4">Resolution Notes</h2>
           <p className="text-gray-700 whitespace-pre-wrap">{call.resolution_notes}</p>
           {call.merchant_rating && (
             <div className="mt-4 pt-4 border-t">
@@ -252,7 +252,7 @@ export function CallDetail() {
       {devices.length > 0 && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">Devices</h2>
+            <h2 className="heading-3-responsive text-gray-900">Devices</h2>
           </div>
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -266,14 +266,14 @@ export function CallDetail() {
             <tbody className="divide-y divide-gray-200">
               {devices.map((cd: any) => (
                 <tr key={cd.id}>
-                  <td className="px-6 py-4 font-medium text-gray-900">{cd.devices?.serial_number}</td>
-                  <td className="px-6 py-4 text-gray-600">{cd.devices?.model}</td>
-                  <td className="px-6 py-4">
+                  <td className="table-td-responsive font-medium text-gray-900">{cd.devices?.serial_number}</td>
+                  <td className="table-td-responsive text-gray-600">{cd.devices?.model}</td>
+                  <td className="table-td-responsive">
                     <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                       {cd.action}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{cd.devices?.status}</td>
+                  <td className="table-td-responsive text-gray-600">{cd.devices?.status}</td>
                 </tr>
               ))}
             </tbody>
@@ -283,7 +283,7 @@ export function CallDetail() {
 
       {photos.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Photos</h2>
+          <h2 className="heading-3-responsive text-gray-900 border-b pb-2 mb-4">Photos</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {photos.map((photo: any) => (
               <div key={photo.id} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">

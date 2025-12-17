@@ -47,6 +47,9 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
     { name: 'User Management', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
+    // Admin Management Pages
+    { name: 'Call Management', href: '/call-management', icon: ClipboardList, module: MODULES.CALLS, adminOnly: true },
+    { name: 'Stock Management', href: '/stock-management', icon: Warehouse, module: MODULES.STOCK, adminOnly: true },
   ];
 
   // Filter navigation based on permissions

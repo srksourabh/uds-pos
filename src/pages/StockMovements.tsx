@@ -118,9 +118,9 @@ export function StockMovements() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Stock Movements</h1>
+          <h1 className="heading-1-responsive text-gray-900">Stock Movements</h1>
           <p className="text-gray-600 mt-2">Complete audit trail of all device movements</p>
         </div>
         <button
@@ -132,7 +132,7 @@ export function StockMovements() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -179,25 +179,25 @@ export function StockMovements() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Device
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Status Change
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   From → To
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Actor
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Reason
                 </th>
               </tr>
@@ -213,10 +213,10 @@ export function StockMovements() {
               ) : (
                 filteredMovements.map((movement) => (
                   <tr key={movement.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {new Date(movement.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {movement.device?.serial_number || 'N/A'}
@@ -224,27 +224,27 @@ export function StockMovements() {
                         <p className="text-xs text-gray-500">{movement.device?.model}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${movementTypeColors[movement.movement_type] || 'bg-gray-100 text-gray-800'}`}>
                         {movement.movement_type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="table-td-responsive whitespace-nowrap text-sm">
                       <span className="text-gray-600">{movement.from_status}</span>
                       <span className="text-gray-400 mx-2">→</span>
                       <span className="text-gray-900 font-medium">{movement.to_status}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="table-td-responsive whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-600">{movement.from_eng?.full_name || movement.from_location || '-'}</span>
                         <ArrowRightLeft className="w-3 h-3 text-gray-400" />
                         <span className="text-gray-900">{movement.to_eng?.full_name || movement.to_location || '-'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {movement.actor?.full_name || 'System'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                    <td className="table-td-responsive text-sm text-gray-600 max-w-xs truncate">
                       {movement.reason}
                     </td>
                   </tr>

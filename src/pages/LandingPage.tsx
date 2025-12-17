@@ -22,7 +22,7 @@ export function LandingPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl mb-6 shadow-lg shadow-blue-500/30">
             <Zap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">UDS Service Portal</h1>
+          <h1 className="heading-1-responsive text-white mb-2">UDS Service Portal</h1>
           <p className="text-slate-400">Field Service Management System</p>
         </div>
 

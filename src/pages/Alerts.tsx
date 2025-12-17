@@ -63,7 +63,7 @@ export function Alerts() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Alerts & Notifications</h1>
+          <h1 className="heading-2-responsive text-gray-900">Alerts & Notifications</h1>
           <p className="text-gray-600 mt-1">System alerts and important notifications</p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -82,7 +82,7 @@ export function Alerts() {
                   {getSeverityIcon(severity)}
                   <span className="font-medium capitalize">{severity}</span>
                 </div>
-                <span className="text-2xl font-bold">{count}</span>
+                <span className="heading-2-responsive">{count}</span>
               </div>
             </div>
           );
@@ -114,7 +114,7 @@ export function Alerts() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-semibold text-gray-900">{alert.title}</h3>
+                          <h3 className="heading-3-responsive text-gray-900">{alert.title}</h3>
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getSeverityColor(alert.severity)}`}>
                             {getAlertTypeLabel(alert.alert_type)}
                           </span>

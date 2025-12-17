@@ -163,7 +163,7 @@ export default function MobileCalls() {
       <OfflineQueueStatus />
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sticky top-0 z-10 shadow-lg">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold">My Calls</h1>
+          <h1 className="heading-3-responsive">My Calls</h1>
           <button
             onClick={fetchCalls}
             disabled={!isOnline || loading}

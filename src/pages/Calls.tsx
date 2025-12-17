@@ -95,9 +95,9 @@ export function Calls() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Calls</h1>
+          <h1 className="heading-1-responsive text-gray-900">Calls</h1>
           <p className="text-gray-600 mt-2">Manage field service calls and assignments</p>
         </div>
         <div className="flex gap-2">
@@ -118,7 +118,7 @@ export function Calls() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -158,7 +158,7 @@ export function Calls() {
           filteredCalls.map((call) => (
             <div
               key={call.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="card-responsive hover:shadow-md transition"
             >
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
@@ -177,7 +177,7 @@ export function Calls() {
                           {call.priority}
                         </span>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{call.client_name}</h3>
+                      <h3 className="heading-3-responsive text-gray-900 mb-1">{call.client_name}</h3>
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                         <MapPin className="w-4 h-4" />
                         <span>{call.client_address}</span>

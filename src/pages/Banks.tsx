@@ -61,15 +61,15 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="modal-backdrop">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Bank/Customer</h2>
+          <h2 className="heading-2-responsive text-gray-900">Add New Bank/Customer</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Bank Name *
               </label>
               <input
@@ -77,12 +77,12 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
                 placeholder="Bank of America"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Bank Code *
               </label>
               <input
@@ -90,14 +90,14 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
                 required
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
                 placeholder="BOA"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="form-label-responsive">
               Contact Person *
             </label>
             <input
@@ -105,14 +105,14 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
               required
               value={formData.contact_person}
               onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-input-responsive focus:border-blue-500"
               placeholder="John Doe"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Contact Email *
               </label>
               <input
@@ -120,12 +120,12 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
                 required
                 value={formData.contact_email}
                 onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
                 placeholder="contact@bank.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Contact Phone *
               </label>
               <input
@@ -133,21 +133,21 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
                 required
                 value={formData.contact_phone}
                 onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
                 placeholder="+1234567890"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="form-label-responsive">
               Address *
             </label>
             <textarea
               required
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-input-responsive focus:border-blue-500"
               rows={3}
               placeholder="Full address"
             />
@@ -164,7 +164,7 @@ function AddBankModal({ isOpen, onClose, onSuccess }: AddBankModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              className="btn-primary-responsive disabled:opacity-50 transition"
             >
               {loading ? 'Adding...' : 'Add Bank'}
             </button>
@@ -239,9 +239,9 @@ export function Banks() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Banks & Customers</h1>
+          <h1 className="heading-1-responsive text-gray-900">Banks & Customers</h1>
           <p className="text-gray-600 mt-2">Manage bank and customer organizations</p>
         </div>
         <button
@@ -253,7 +253,7 @@ export function Banks() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
@@ -276,7 +276,7 @@ export function Banks() {
           filteredBanks.map((bank) => (
             <div
               key={bank.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="card-responsive hover:shadow-md transition"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">

@@ -392,9 +392,9 @@ export function Dashboard() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-responsive">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="heading-1-responsive text-gray-900">
             Welcome back, {profile?.full_name}
           </h1>
           <span className={`px-3 py-1 text-xs font-medium rounded-full ${
@@ -412,7 +412,7 @@ export function Dashboard() {
 
       {/* Super Admin Quick Actions */}
       {isSuperAdmin && (
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-responsive grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
             to="/users"
             className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 text-white hover:from-purple-700 hover:to-purple-800 transition group"
@@ -457,7 +457,7 @@ export function Dashboard() {
 
       {/* Engineer Quick Actions */}
       {isEngineer && (
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-responsive grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             to="/calls"
             className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white hover:from-blue-700 hover:to-blue-800 transition group"
@@ -487,18 +487,18 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid-responsive-4">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <div
               key={stat.title}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="card-responsive hover:shadow-md transition"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                  <p className="heading-1-responsive text-gray-900 mt-2">{stat.value}</p>
                 </div>
                 <div className={`${stat.bgColor} p-3 rounded-lg`}>
                   <Icon className="w-6 h-6 text-white" />
@@ -515,7 +515,7 @@ export function Dashboard() {
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapIcon className="w-5 h-5 text-blue-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Live Map</h2>
+              <h2 className="heading-3-responsive text-gray-900">Live Map</h2>
               <span className="text-sm text-gray-500">
                 ({mapEngineers.filter(e => e.latitude).length} engineers, {mapCalls.filter(c => c.latitude).length} calls)
               </span>
@@ -542,25 +542,25 @@ export function Dashboard() {
       {isAdmin && (
         <>
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Calls Trend (Last 7 Days)</h2>
+            <div className="card-responsive">
+              <h2 className="heading-3-responsive text-gray-900 mb-4">Calls Trend (Last 7 Days)</h2>
               <CallsTrendChart data={callsTrendData} loading={chartsLoading} />
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Calls by Priority</h2>
+            <div className="card-responsive">
+              <h2 className="heading-3-responsive text-gray-900 mb-4">Active Calls by Priority</h2>
               <PriorityPieChart data={priorityData} loading={chartsLoading} />
             </div>
           </div>
 
           <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Distribution by Bank</h2>
+            <h2 className="heading-3-responsive text-gray-900 mb-4">Device Distribution by Bank</h2>
             <DeviceDistributionChart data={deviceDistData} loading={chartsLoading} />
           </div>
 
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Device Status Overview</h2>
+            <div className="card-responsive">
+              <h2 className="heading-3-responsive text-gray-900 mb-4">Device Status Overview</h2>
               <div className="space-y-4">
                 {[
                   { label: 'Warehouse', value: stats.warehouseDevices, total: stats.totalDevices, color: 'bg-gray-500' },
@@ -587,8 +587,8 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Call Status Overview</h2>
+            <div className="card-responsive">
+              <h2 className="heading-3-responsive text-gray-900 mb-4">Call Status Overview</h2>
               <div className="space-y-4">
                 {[
                   { label: 'Pending', value: stats.pendingCalls, total: stats.activeCalls, color: 'bg-orange-500' },
@@ -620,7 +620,7 @@ export function Dashboard() {
       {/* Engineer simplified view */}
       {isEngineer && (
         <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Call Status</h2>
+          <h2 className="heading-3-responsive text-gray-900 mb-4">Your Call Status</h2>
           <div className="space-y-4">
             {[
               { label: 'Pending Calls', value: stats.pendingCalls, color: 'bg-orange-500' },
@@ -632,7 +632,7 @@ export function Dashboard() {
                   <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
                   <span className="text-gray-700">{item.label}</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{item.value}</span>
+                <span className="heading-2-responsive text-gray-900">{item.value}</span>
               </div>
             ))}
           </div>

@@ -79,7 +79,7 @@ export default function MobileInventory() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">My Inventory</h1>
+            <h1 className="heading-3-responsive text-gray-900">My Inventory</h1>
             <p className="text-sm text-gray-600">{devices.length} devices assigned</p>
           </div>
         </div>

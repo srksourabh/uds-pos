@@ -48,7 +48,7 @@ export function PendingApproval() {
             <div className="bg-yellow-100 p-4 rounded-full mb-4">
               <Clock className="w-12 h-12 text-yellow-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Pending Approval</h1>
+            <h1 className="heading-1-responsive text-gray-900 mb-2">Pending Approval</h1>
             <p className="text-gray-600 text-center">
               Your account is awaiting administrator approval
             </p>

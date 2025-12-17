@@ -92,22 +92,22 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="modal-backdrop">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Create New Shipment</h2>
+          <h2 className="heading-2-responsive text-gray-900">Create New Shipment</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Courier *
               </label>
               <select
                 required
                 value={formData.courier_id}
                 onChange={(e) => setFormData({ ...formData, courier_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
               >
                 <option value="">Select courier</option>
                 {couriers.map((courier) => (
@@ -118,7 +118,7 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Tracking Number *
               </label>
               <input
@@ -126,21 +126,21 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
                 required
                 value={formData.tracking_number}
                 onChange={(e) => setFormData({ ...formData, tracking_number: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
                 placeholder="TRK123456789"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="form-label-responsive">
               Device Serial Numbers *
             </label>
             <textarea
               required
               value={formData.device_serials}
               onChange={(e) => setFormData({ ...formData, device_serials: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-input-responsive focus:border-blue-500"
               rows={3}
               placeholder="Enter serial numbers separated by commas"
             />
@@ -149,14 +149,14 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Source Type *
               </label>
               <select
                 required
                 value={formData.source_type}
                 onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
               >
                 <option value="warehouse">Warehouse</option>
                 <option value="engineer">Engineer</option>
@@ -164,14 +164,14 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Destination Type *
               </label>
               <select
                 required
                 value={formData.destination_type}
                 onChange={(e) => setFormData({ ...formData, destination_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-responsive focus:border-blue-500"
               >
                 <option value="warehouse">Warehouse</option>
                 <option value="engineer">Engineer</option>
@@ -182,13 +182,13 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="form-label-responsive">
               Notes
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-input-responsive focus:border-blue-500"
               rows={2}
               placeholder="Additional shipment notes..."
             />
@@ -205,7 +205,7 @@ function CreateShipmentModal({ isOpen, onClose, onSuccess }: CreateShipmentModal
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              className="btn-primary-responsive disabled:opacity-50 transition"
             >
               {loading ? 'Creating...' : 'Create Shipment'}
             </button>
@@ -299,9 +299,9 @@ export function InTransit() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">In Transit</h1>
+          <h1 className="heading-1-responsive text-gray-900">In Transit</h1>
           <p className="text-gray-600 mt-2">Track device shipments with courier tracking</p>
         </div>
         <button
@@ -313,7 +313,7 @@ export function InTransit() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -349,7 +349,7 @@ export function InTransit() {
           filteredShipments.map((shipment) => (
             <div
               key={shipment.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="card-responsive hover:shadow-md transition"
             >
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex-1">

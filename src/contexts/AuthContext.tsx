@@ -5,12 +5,17 @@ import type { Database } from '../lib/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
-// Check if test accounts are enabled (development/testing only)
-// SECURITY: Test accounts are NEVER enabled in production builds, even with env variable
-const TEST_ACCOUNTS_ENABLED = !import.meta.env.PROD && (
-  import.meta.env.VITE_ENABLE_TEST_ACCOUNTS === 'true' ||
+// Check if test accounts are enabled
+// NOTE: Enabled on localhost, Vercel previews (*.vercel.app), or with explicit env var
+// SECURITY: For true production, use a custom domain to disable test accounts
+const TEST_ACCOUNTS_ENABLED = (
+  // Development mode (localhost)
   import.meta.env.DEV ||
-  window.location.hostname === 'localhost'
+  window.location.hostname === 'localhost' ||
+  // Vercel preview/development deployments (for team testing)
+  window.location.hostname.endsWith('.vercel.app') ||
+  // Explicit enable via environment variable (non-production only)
+  (!import.meta.env.PROD && import.meta.env.VITE_ENABLE_TEST_ACCOUNTS === 'true')
 );
 
 // Debug logging helper - only logs in development
@@ -44,35 +49,35 @@ const createTestProfile = (overrides: Partial<UserProfile>): UserProfile => ({
 });
 
 // Simple test accounts for easy testing
-// Login with: admin / admin  OR  test / test
+// Login with: super / super  OR  admin / admin  OR  engineer / engineer
 const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; profile: UserProfile }> = {
   'admin': {
     password: 'admin',
     user: {
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.test',
+      email: 'admin@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-admin-uuid-0001',
-      email: 'admin@uds.test',
-      full_name: 'Test Admin',
+      email: 'admin@uds.com',
+      full_name: 'Admin User',
       phone: '+1234567890',
       role: 'admin',
     }),
   },
-  'test': {
-    password: 'test',
+  'engineer': {
+    password: 'engineer',
     user: {
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.test',
+      email: 'engineer@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-engineer-uuid-0002',
-      email: 'engineer@uds.test',
+      email: 'engineer@uds.com',
       full_name: 'Test Engineer',
       phone: '+1234567891',
       role: 'engineer',
@@ -82,13 +87,13 @@ const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; pro
     password: 'super',
     user: {
       id: 'test-super-uuid-0003',
-      email: 'super@uds.test',
+      email: 'super@uds.com',
       role: 'authenticated',
       aud: 'authenticated',
     } as Partial<User>,
     profile: createTestProfile({
       id: 'test-super-uuid-0003',
-      email: 'super@uds.test',
+      email: 'super@uds.com',
       full_name: 'Super Admin',
       phone: '+1234567892',
       role: 'super_admin',
@@ -109,6 +114,9 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   isSuperAdmin: boolean;
   isAdmin: boolean;
+  isCallManager: boolean;
+  isStockManager: boolean;
+  isEngineer: boolean;
   isActive: boolean;
   isPending: boolean;
 }
@@ -308,7 +316,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     reloadProfile,
     refreshProfile: reloadProfile, // Alias for reloadProfile
     isSuperAdmin: profile?.role === 'super_admin',
-    isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin',
+    // Admin-level roles can access admin dashboard
+    isAdmin: ['super_admin', 'senior_manager', 'manager', 'coordinator', 'stock_coordinator', 'admin'].includes(profile?.role || ''),
+    // Can manage calls (allocate, view all)
+    isCallManager: ['super_admin', 'senior_manager', 'manager', 'coordinator', 'admin'].includes(profile?.role || ''),
+    // Can manage stock
+    isStockManager: ['super_admin', 'senior_manager', 'manager', 'stock_coordinator', 'admin'].includes(profile?.role || ''),
+    // Is field engineer
+    isEngineer: profile?.role === 'engineer',
     isActive: profile?.status === 'active',
     isPending: profile?.status === 'pending_approval',
   };

@@ -204,23 +204,23 @@ export function ReceiveStock() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Receive Stock</h1>
+      <div className="mb-responsive">
+        <h1 className="heading-1-responsive text-gray-900">Receive Stock</h1>
         <p className="text-gray-600 mt-2">Scan or manually add devices from banks/customers</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Source & Scanning</h2>
+          <h2 className="heading-3-responsive text-gray-900 mb-4">Source & Scanning</h2>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-responsive">
+            <label className="form-label-responsive">
               Source Bank/Customer *
             </label>
             <select
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-input-responsive focus:border-blue-500"
             >
               <option value="">Select source bank/customer</option>
               {banks.map((bank) => (
@@ -258,7 +258,7 @@ export function ReceiveStock() {
 
           {scanMode === 'barcode' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Scan Barcode
               </label>
               <input
@@ -278,7 +278,7 @@ export function ReceiveStock() {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="form-label-responsive">
                   Serial Number *
                 </label>
                 <input
@@ -287,11 +287,11 @@ export function ReceiveStock() {
                   onChange={(e) => setManualEntry({ ...manualEntry, serial_number: e.target.value })}
                   placeholder="SN123456789"
                   disabled={!selectedBank}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  className="form-input-responsive focus:border-blue-500 disabled:bg-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="form-label-responsive">
                   Model *
                 </label>
                 <input
@@ -300,7 +300,7 @@ export function ReceiveStock() {
                   onChange={(e) => setManualEntry({ ...manualEntry, model: e.target.value })}
                   placeholder="PAX S920"
                   disabled={!selectedBank}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  className="form-input-responsive focus:border-blue-500 disabled:bg-gray-100"
                 />
               </div>
               <button
@@ -314,8 +314,8 @@ export function ReceiveStock() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Summary</h2>
+        <div className="card-responsive">
+          <h2 className="heading-3-responsive text-gray-900 mb-4">Summary</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <span className="text-sm text-gray-700">Total Scanned</span>
@@ -347,7 +347,7 @@ export function ReceiveStock() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Scanned Devices</h2>
+          <h2 className="heading-3-responsive text-gray-900">Scanned Devices</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -381,19 +381,19 @@ export function ReceiveStock() {
               ) : (
                 scannedDevices.map((device, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <span className="font-mono text-sm text-gray-900">{device.serial_number}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.model}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-900">{device.source_bank_name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       {device.status === 'success' ? (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">
                           <CheckCircle className="w-3 h-3 mr-1" />
@@ -413,7 +413,7 @@ export function ReceiveStock() {
                         <p className="text-xs text-red-600 mt-1">{device.error_message}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <button
                         onClick={() => handleRemoveDevice(device.serial_number)}
                         className="text-sm text-red-600 hover:text-red-700 font-medium"

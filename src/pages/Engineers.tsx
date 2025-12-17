@@ -62,9 +62,9 @@ export function Engineers() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Engineers</h1>
+          <h1 className="heading-1-responsive text-gray-900">Engineers</h1>
           <p className="text-gray-600 mt-2">Manage field service engineers</p>
         </div>
         <button
@@ -76,7 +76,7 @@ export function Engineers() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
@@ -99,7 +99,7 @@ export function Engineers() {
           filteredEngineers.map((engineer) => (
             <div
               key={engineer.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+              className="card-responsive hover:shadow-md transition"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">

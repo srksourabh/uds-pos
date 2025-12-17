@@ -117,7 +117,7 @@ export default function MobileInstallationFlow() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">Installation Guide</h1>
+            <h1 className="heading-3-responsive text-gray-900">Installation Guide</h1>
             <p className="text-sm text-gray-600">
               Step {completedSteps + 1} of {steps.length}
             </p>

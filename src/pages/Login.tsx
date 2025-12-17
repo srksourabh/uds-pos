@@ -21,8 +21,8 @@ export function Login() {
     setLoading(true);
 
     try {
-      // Auto-append @test.com if no @ symbol (for easy testing)
-      const loginEmail = email.includes('@') ? email : `${email}@test.com`;
+      // Auto-append @uds.com if no @ symbol (for easy testing)
+      const loginEmail = email.includes('@') ? email : `${email}@uds.com`;
       await signIn(loginEmail, password);
       navigate('/dashboard');
     } catch (err) {
@@ -40,12 +40,12 @@ export function Login() {
             <div className="bg-blue-600 p-3 rounded-xl mb-4">
               <Building2 className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Field Service</h1>
+            <h1 className="heading-1-responsive text-gray-900">Field Service</h1>
             <p className="text-gray-600 mt-2">POS Device Management</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-responsive p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
@@ -53,7 +53,7 @@ export function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="form-label-responsive">
                 Username / Email
               </label>
               <input
@@ -68,7 +68,7 @@ export function Login() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="form-label-responsive">
                 Password
               </label>
               <input
@@ -93,8 +93,8 @@ export function Login() {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              <strong>Test Accounts:</strong> superadmin / admin / engineer<br />
-              (Use the same word for password)
+              <strong>Test Accounts:</strong> super / admin / engineer<br />
+              (Password = same as username)
             </p>
           </div>
         </div>

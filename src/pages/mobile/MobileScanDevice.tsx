@@ -148,7 +148,7 @@ export default function MobileScanDevice() {
             <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <QrCode className="w-12 h-12 text-blue-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Scan or Enter Serial Number</h2>
+            <h2 className="heading-3-responsive text-gray-900 mb-2">Scan or Enter Serial Number</h2>
             <p className="text-sm text-gray-600">
               Use QR code scanner, OCR from photo, or enter manually
             </p>
@@ -238,7 +238,7 @@ export default function MobileScanDevice() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label-responsive">
                 Device Serial Number
                 {ocrConfidence > 0 && scanMode === 'ocr' && (
                   <span className="ml-2 text-xs text-green-600">
@@ -341,13 +341,13 @@ export default function MobileScanDevice() {
                 {result.success && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="form-label-responsive">
                         Select Action
                       </label>
                       <select
                         value={action}
                         onChange={(e) => setAction(e.target.value as any)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="form-input-responsive focus:border-transparent"
                       >
                         <option value="install">Install</option>
                         <option value="swap_in">Swap In (New Device)</option>

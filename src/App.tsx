@@ -34,6 +34,8 @@ import { Reports } from './pages/Reports';
 import { ReceiveStock } from './pages/ReceiveStock';
 import { InTransit } from './pages/InTransit';
 import { UserManagement } from './pages/UserManagement';
+import { CallManagement } from './pages/CallManagement';
+import { StockManagement } from './pages/StockManagement';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -202,6 +204,28 @@ function App() {
                     <ProtectedRoute requireAdmin>
                       <Layout>
                         <UserManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Admin Management Pages */}
+                <Route
+                  path="/call-management"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <CallManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/stock-management"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <StockManagement />
                       </Layout>
                     </ProtectedRoute>
                   }

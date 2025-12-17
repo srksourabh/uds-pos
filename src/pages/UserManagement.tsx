@@ -252,9 +252,9 @@ export function UserManagement() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <h1 className="heading-1-responsive text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-2">
             {isSuperAdmin
               ? 'Manage all users and their permissions'
@@ -273,7 +273,7 @@ export function UserManagement() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />

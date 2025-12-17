@@ -33,8 +33,8 @@ export default function MobileLogin() {
     setLoading(true);
 
     try {
-      // Auto-append @test.com if no @ present
-      const email = username.includes('@') ? username : `${username}@test.com`;
+      // Auto-append @uds.com if no @ present
+      const email = username.includes('@') ? username : `${username}@uds.com`;
 
       debugLog('Attempting login with email:', email);
 
@@ -116,7 +116,7 @@ export default function MobileLogin() {
               <Wrench className="h-8 w-8 text-white" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900">UDS Service</h1>
+              <h1 className="heading-2-responsive text-gray-900">UDS Service</h1>
               <p className="text-sm text-gray-600">Field Engineer Portal</p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function MobileLogin() {
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="heading-2-responsive text-gray-900 mb-2">
                 Engineer Login
               </h2>
               <p className="text-gray-600">
@@ -144,7 +144,7 @@ export default function MobileLogin() {
               )}
 
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="username" className="form-label-responsive">
                   Username
                 </label>
                 <input
@@ -164,7 +164,7 @@ export default function MobileLogin() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="form-label-responsive">
                   Password
                 </label>
                 <div className="relative">

@@ -93,7 +93,7 @@ export default function MobilePhotoCapture() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">Photo Evidence</h1>
+          <h1 className="heading-3-responsive">Photo Evidence</h1>
           <p className="text-sm text-gray-300">Capture and upload</p>
         </div>
       </div>

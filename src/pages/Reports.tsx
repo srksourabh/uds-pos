@@ -50,14 +50,14 @@ export function Reports() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Reconciliation</h1>
+          <h1 className="heading-2-responsive text-gray-900">Reports & Reconciliation</h1>
           <p className="text-gray-600 mt-1">Generate inventory and stock movement reports</p>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Reconciliation Export</h2>
+          <h2 className="heading-3-responsive text-gray-900 mb-4">Reconciliation Export</h2>
           <p className="text-sm text-gray-600 mb-6">
             Export device inventory and stock movements for reconciliation and auditing purposes.
           </p>
@@ -65,14 +65,14 @@ export function Reports() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="form-label-responsive">
               <Filter className="w-4 h-4 inline mr-1" />
               Filter by Bank
             </label>
             <select
               value={filters.bankId}
               onChange={(e) => setFilters({ ...filters, bankId: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="form-input-responsive"
             >
               <option value="">All Banks</option>
               {banks.map(bank => (
@@ -82,7 +82,7 @@ export function Reports() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="form-label-responsive">
               <Calendar className="w-4 h-4 inline mr-1" />
               Date Range
             </label>
@@ -122,7 +122,7 @@ export function Reports() {
           <button
             onClick={handleExport}
             disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            className="btn-primary-responsive disabled:opacity-50 flex items-center gap-2"
           >
             {loading ? (
               <>
@@ -142,24 +142,24 @@ export function Reports() {
       {exportResult && (
         <div className="bg-white rounded-lg shadow p-6 space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Export Complete</h2>
+            <h2 className="heading-3-responsive text-gray-900 mb-2">Export Complete</h2>
             <p className="text-sm text-gray-600">Generated on {new Date().toLocaleString()}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-blue-50 rounded-lg">
               <div className="text-sm text-blue-600 font-medium mb-1">Total Devices</div>
-              <div className="text-2xl font-bold text-blue-900">{exportResult.deviceCount}</div>
+              <div className="heading-2-responsive text-blue-900">{exportResult.deviceCount}</div>
             </div>
             {exportResult.movementCount > 0 && (
               <div className="p-4 bg-green-50 rounded-lg">
                 <div className="text-sm text-green-600 font-medium mb-1">Stock Movements</div>
-                <div className="text-2xl font-bold text-green-900">{exportResult.movementCount}</div>
+                <div className="heading-2-responsive text-green-900">{exportResult.movementCount}</div>
               </div>
             )}
             <div className="p-4 bg-purple-50 rounded-lg">
               <div className="text-sm text-purple-600 font-medium mb-1">File Size</div>
-              <div className="text-2xl font-bold text-purple-900">
+              <div className="heading-2-responsive text-purple-900">
                 {((exportResult.devicesCsv.length + (exportResult.movementsCsv?.length || 0)) / 1024).toFixed(1)} KB
               </div>
             </div>
@@ -172,7 +172,7 @@ export function Reports() {
                 {Object.entries(exportResult.summary.by_status || {}).map(([status, count]: any) => (
                   <div key={status} className="p-3 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-600 mb-1 capitalize">{status.replace(/_/g, ' ')}</div>
-                    <div className="text-xl font-bold text-gray-900">{count}</div>
+                    <div className="heading-3-responsive text-gray-900">{count}</div>
                   </div>
                 ))}
               </div>

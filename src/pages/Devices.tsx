@@ -112,9 +112,9 @@ export function Devices() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-responsive flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Devices</h1>
+          <h1 className="heading-1-responsive text-gray-900">Devices</h1>
           <p className="text-gray-600 mt-2">Manage POS devices and inventory</p>
         </div>
         <div className="flex gap-3">
@@ -136,7 +136,7 @@ export function Devices() {
       </div>
 
       {selectedDevices.size > 0 && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="mb-responsive bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <CheckSquare className="w-5 h-5 text-blue-600" />
@@ -163,7 +163,7 @@ export function Devices() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="card-responsive mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -198,7 +198,7 @@ export function Devices() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left">
+                <th className="table-td-responsive text-left">
                   <input
                     type="checkbox"
                     checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
@@ -206,22 +206,22 @@ export function Devices() {
                     className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Serial Number
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Model
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Bank
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Assigned To
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="table-td-responsive text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Location
                 </th>
               </tr>
@@ -237,7 +237,7 @@ export function Devices() {
               ) : (
                 filteredDevices.map((device) => (
                   <tr key={device.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4">
+                    <td className="table-td-responsive">
                       <input
                         type="checkbox"
                         checked={selectedDevices.has(device.id)}
@@ -245,27 +245,27 @@ export function Devices() {
                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <div className="flex items-center">
                         <Smartphone className="w-5 h-5 text-gray-400 mr-3" />
                         <span className="font-medium text-gray-900">{device.serial_number}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.model}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <span className="text-sm text-gray-900">{device.bank?.name || 'N/A'}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="table-td-responsive whitespace-nowrap">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${statusColors[device.status || 'warehouse']}`}>
                         {device.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.assigned_engineer?.full_name || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.installed_at_client || '-'}
                     </td>
                   </tr>

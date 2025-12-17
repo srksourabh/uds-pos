@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 // Role type used across the application
-export type UserRole = 'admin' | 'engineer' | 'super_admin'
+export type UserRole = 'super_admin' | 'senior_manager' | 'manager' | 'coordinator' | 'stock_coordinator' | 'engineer' | 'admin'
 
 // Status types
 export type UserStatus = 'pending_approval' | 'active' | 'suspended' | 'inactive'

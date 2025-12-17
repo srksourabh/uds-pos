@@ -179,12 +179,12 @@ export function EnhancedLogin() {
             <div className="bg-blue-600 p-3 rounded-xl mb-4">
               <Building2 className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Portal</h1>
+            <h1 className="heading-1-responsive text-gray-900">Admin Portal</h1>
             <p className="text-gray-600 mt-2">Field Service Management</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-responsive p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
@@ -193,7 +193,7 @@ export function EnhancedLogin() {
           {loginMethod === 'email' ? (
             <form onSubmit={handleEmailSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="form-label-responsive">
                   Email or Username
                 </label>
                 <input
@@ -208,7 +208,7 @@ export function EnhancedLogin() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="form-label-responsive">
                   Password
                 </label>
                 <input
@@ -246,7 +246,7 @@ export function EnhancedLogin() {
           ) : phoneStep === 'enter-phone' ? (
             <form onSubmit={handlePhoneSubmit} className="space-y-6">
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="phone" className="form-label-responsive">
                   Phone Number
                 </label>
                 <input
@@ -283,7 +283,7 @@ export function EnhancedLogin() {
               </button>
 
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="otp" className="form-label-responsive">
                   Verification Code
                 </label>
                 <input

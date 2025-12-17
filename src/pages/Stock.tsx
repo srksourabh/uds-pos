@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useDevices, useIssueDevices, useMarkDeviceFaulty } from '../lib/api-hooks';
 import { supabase } from '../lib/supabase';
-import { Package, Search, Upload, AlertTriangle, X } from 'lucide-react';
+import { Package, Search, Upload, AlertTriangle, X, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { StockCSVUpload } from '../components/CSVUpload';
 
 export function Stock() {
   const { isAdmin } = useAuth();
@@ -13,14 +14,16 @@ export function Stock() {
     search: '',
   });
 
-  const { data: devices, loading } = useDevices(filters);
+  const { data: devices, loading, refetch } = useDevices(filters);
   const { issueDevices, loading: issuing } = useIssueDevices();
   const { markFaulty } = useMarkDeviceFaulty();
 
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showFaultyModal, setShowFaultyModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [banks, setBanks] = useState<any[]>([]);
   const [engineers, setEngineers] = useState<any[]>([]);
@@ -34,6 +37,13 @@ export function Stock() {
       setEngineers(engineersRes.data || []);
     });
   }, []);
+
+  // Refresh devices when refreshKey changes
+  useEffect(() => {
+    if (refreshKey > 0 && refetch) {
+      refetch();
+    }
+  }, [refreshKey, refetch]);
 
   const handleSelectDevice = (deviceId: string) => {
     setSelectedDevices(prev =>
@@ -94,15 +104,29 @@ export function Stock() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stock Management</h1>
+          <h1 className="heading-2-responsive text-gray-900">Stock Management</h1>
           <p className="text-gray-600 mt-1">Manage device inventory and stock movements</p>
         </div>
         {isAdmin && (
           <div className="flex gap-2">
             <button
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Import Stock
+            </button>
+            <button
+              onClick={() => setRefreshKey(k => k + 1)}
+              className="btn-secondary-responsive flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button
               disabled={selectedDevices.length === 0}
               onClick={() => setShowIssueModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn-primary-responsive disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Upload className="w-4 h-4" />
               Issue Selected ({selectedDevices.length})
@@ -189,7 +213,7 @@ export function Stock() {
               {devices.map((device: any) => (
                 <tr key={device.id} className="hover:bg-gray-50">
                   {isAdmin && (
-                    <td className="px-6 py-4">
+                    <td className="table-td-responsive">
                       <input
                         type="checkbox"
                         checked={selectedDevices.includes(device.id)}
@@ -198,18 +222,18 @@ export function Stock() {
                       />
                     </td>
                   )}
-                  <td className="px-6 py-4 font-medium text-gray-900">{device.serial_number}</td>
-                  <td className="px-6 py-4 text-gray-600">{device.model}</td>
-                  <td className="px-6 py-4">
+                  <td className="table-td-responsive font-medium text-gray-900">{device.serial_number}</td>
+                  <td className="table-td-responsive text-gray-600">{device.model}</td>
+                  <td className="table-td-responsive">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(device.status)}`}>
                       {device.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{device.banks?.code}</td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">
+                  <td className="table-td-responsive text-gray-600">{device.banks?.code}</td>
+                  <td className="table-td-responsive text-gray-600 text-sm">
                     {device.installed_at_client || device.assigned_to || 'Warehouse'}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="table-td-responsive">
                     {device.status !== 'faulty' && (
                       <button
                         onClick={() => {
@@ -245,6 +269,30 @@ export function Stock() {
         }}
         onSubmit={handleMarkFaulty}
       />}
+
+      {showImportModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content-responsive max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="heading-3-responsive">Import Stock from CSV</h3>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <StockCSVUpload
+              onComplete={(results) => {
+                const successCount = results.filter(r => r.success).length;
+                if (successCount > 0) {
+                  setRefreshKey(k => k + 1);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -253,10 +301,10 @@ function IssueDevicesModal({ engineers, onClose, onSubmit, loading }: any) {
   const [engineerId, setEngineerId] = useState('');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="modal-backdrop">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Issue Devices to Engineer</h3>
+          <h3 className="heading-3-responsive">Issue Devices to Engineer</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -264,11 +312,11 @@ function IssueDevicesModal({ engineers, onClose, onSubmit, loading }: any) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Engineer</label>
+            <label className="form-label-responsive">Select Engineer</label>
             <select
               value={engineerId}
               onChange={(e) => setEngineerId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="form-input-responsive"
             >
               <option value="">Choose an engineer...</option>
               {engineers.map((eng: any) => (
@@ -289,7 +337,7 @@ function IssueDevicesModal({ engineers, onClose, onSubmit, loading }: any) {
             <button
               onClick={() => onSubmit(engineerId)}
               disabled={!engineerId || loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="btn-primary-responsive disabled:opacity-50"
             >
               {loading ? 'Issuing...' : 'Issue Devices'}
             </button>
@@ -310,10 +358,10 @@ function MarkFaultyModal({ device, onClose, onSubmit }: any) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="modal-backdrop">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Mark Device as Faulty</h3>
+          <h3 className="heading-3-responsive">Mark Device as Faulty</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -325,22 +373,22 @@ function MarkFaultyModal({ device, onClose, onSubmit }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fault Description*</label>
+            <label className="form-label-responsive">Fault Description*</label>
             <textarea
               value={formData.faultDescription}
               onChange={(e) => setFormData({ ...formData, faultDescription: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="form-input-responsive"
               placeholder="Describe the fault in detail (min 20 characters)..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category*</label>
+            <label className="form-label-responsive">Category*</label>
             <select
               value={formData.faultCategory}
               onChange={(e) => setFormData({ ...formData, faultCategory: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="form-input-responsive"
             >
               <option value="Hardware">Hardware</option>
               <option value="Software">Software</option>
@@ -350,11 +398,11 @@ function MarkFaultyModal({ device, onClose, onSubmit }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Severity*</label>
+            <label className="form-label-responsive">Severity*</label>
             <select
               value={formData.severity}
               onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="form-input-responsive"
             >
               <option value="minor">Minor</option>
               <option value="major">Major</option>
@@ -372,7 +420,7 @@ function MarkFaultyModal({ device, onClose, onSubmit }: any) {
             <button
               onClick={() => onSubmit(formData)}
               disabled={formData.faultDescription.length < 20}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              className="btn-danger-responsive disabled:opacity-50"
             >
               Mark as Faulty
             </button>

@@ -530,41 +530,43 @@ export function useDevices(filters?: DeviceFilters) {
   const [data, setData] = useState<DeviceWithBank[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+  const fetchDevices = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('devices')
+        .select('*, banks(id, name, code)')
+        .order('created_at', { ascending: false });
+
+      if (filters?.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status as Database['public']['Tables']['devices']['Row']['status']);
+      }
+      if (filters?.bank && filters.bank !== 'all') {
+        query = query.eq('device_bank', filters.bank);
+      }
+      if (filters?.assignedTo && filters.assignedTo !== 'all') {
+        query = query.eq('assigned_to', filters.assignedTo);
+      }
+      if (filters?.search) {
+        const sanitizedSearch = sanitizeSearchInput(filters.search);
+        if (sanitizedSearch) {
+          query = query.or(`serial_number.ilike.%${sanitizedSearch}%,model.ilike.%${sanitizedSearch}%`);
+        }
+      }
+
+      const { data: deviceData, error: deviceError } = await query;
+      if (deviceError) throw deviceError;
+      setData((deviceData || []) as unknown as DeviceWithBank[]);
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDevices = async () => {
-      try {
-        let query = supabase
-          .from('devices')
-          .select('*, banks(id, name, code)')
-          .order('created_at', { ascending: false });
-
-        if (filters?.status && filters.status !== 'all') {
-          query = query.eq('status', filters.status as Database['public']['Tables']['devices']['Row']['status']);
-        }
-        if (filters?.bank && filters.bank !== 'all') {
-          query = query.eq('device_bank', filters.bank);
-        }
-        if (filters?.assignedTo && filters.assignedTo !== 'all') {
-          query = query.eq('assigned_to', filters.assignedTo);
-        }
-        if (filters?.search) {
-          const sanitizedSearch = sanitizeSearchInput(filters.search);
-          if (sanitizedSearch) {
-            query = query.or(`serial_number.ilike.%${sanitizedSearch}%,model.ilike.%${sanitizedSearch}%`);
-          }
-        }
-
-        const { data: deviceData, error: deviceError } = await query;
-        if (deviceError) throw deviceError;
-        setData((deviceData || []) as unknown as DeviceWithBank[]);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'));
-        setLoading(false);
-      }
-    };
-
     fetchDevices();
 
     const subscription = supabase
@@ -577,9 +579,11 @@ export function useDevices(filters?: DeviceFilters) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [filters?.status, filters?.bank, filters?.assignedTo, filters?.search]);
+  }, [filters?.status, filters?.bank, filters?.assignedTo, filters?.search, refetchTrigger]);
 
-  return { data, loading, error };
+  const refetch = () => setRefetchTrigger(t => t + 1);
+
+  return { data, loading, error, refetch };
 }
 
 export function useEngineers() {
