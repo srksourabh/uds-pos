@@ -368,7 +368,66 @@ CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi
                 Upload {parsedData.length} Calls
               </>
             )}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Upload Calls from CSV</h3>
+        <button
+          onClick={downloadTemplate}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          <Download className="w-4 h-4" />
+          Download Template
+        </button>
+      </div>
+
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`
+          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          ${isDragging
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+          }
+        `}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+        <p className="text-gray-600 mb-2">
+          Drag and drop your CSV file here, or click to browse
+        </p>
+        <p className="text-sm text-gray-400">
+          Supports .csv files with call data
+        </p>
+      </div>
+
+      <div className="text-sm text-gray-500">
+        <p className="font-medium mb-1">Required columns:</p>
+        <p className="text-xs">{REQUIRED_COLUMNS.join(', ')}</p>
+        <p className="font-medium mt-2 mb-1">Optional columns:</p>
+        <p className="text-xs">
+          priority, client_contact, client_phone, latitude, longitude,
+          scheduled_date, scheduled_time_window, description, client_bank, requires_photo
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ============================================================
 // STOCK CSV IMPORT COMPONENT
@@ -889,66 +948,6 @@ WB456789012345678,FUJIAN K9,Axis,warehouse,Kolkata Hub,v3.0.1,2026-03-15,`;
           <Download className="w-4 h-4" />
           Download Template
         </button>
-      </div>
-    </div>
-  );
-}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Upload Calls from CSV</h3>
-        <button
-          onClick={downloadTemplate}
-          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-        >
-          <Download className="w-4 h-4" />
-          Download Template
-        </button>
-      </div>
-
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragging
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-          }
-        `}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-        <p className="text-gray-600 mb-2">
-          Drag and drop your CSV file here, or click to browse
-        </p>
-        <p className="text-sm text-gray-400">
-          Supports .csv files with call data
-        </p>
-      </div>
-
-      <div className="text-sm text-gray-500">
-        <p className="font-medium mb-1">Required columns:</p>
-        <p className="text-xs">{REQUIRED_COLUMNS.join(', ')}</p>
-        <p className="font-medium mt-2 mb-1">Optional columns:</p>
-        <p className="text-xs">
-          priority, client_contact, client_phone, latitude, longitude,
-          scheduled_date, scheduled_time_window, description, client_bank, requires_photo
-        </p>
       </div>
     </div>
   );
