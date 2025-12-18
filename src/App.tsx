@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -5,6 +6,7 @@ import { PermissionsProvider } from './contexts/PermissionsContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
+import { checkAndClearCache, getCacheVersion } from './lib/cacheManager';
 
 // Create a React Query client with sensible defaults
 const queryClient = new QueryClient({
@@ -16,6 +18,7 @@ const queryClient = new QueryClient({
     },
   },
 });
+
 import { LandingPage } from './pages/LandingPage';
 import { EnhancedLogin } from './pages/EnhancedLogin';
 import { ProfileSetup } from './pages/ProfileSetup';
@@ -48,6 +51,16 @@ import { TermsOfService } from './pages/TermsOfService';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 
 function App() {
+  useEffect(() => {
+    // Check cache version on app load
+    const cacheCleared = checkAndClearCache();
+    if (cacheCleared) {
+      console.log(`[App] Cache cleared - now running version ${getCacheVersion()}`);
+    } else {
+      console.log(`[App] Cache up to date - version ${getCacheVersion()}`);
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

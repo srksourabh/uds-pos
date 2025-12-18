@@ -20,7 +20,8 @@ import {
   Truck,
   Warehouse,
   FileText,
-  Shield
+  Shield,
+  User
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -31,6 +32,7 @@ export function Layout({ children }: LayoutProps) {
   const { profile, signOut } = useAuth();
   const { hasAccess, isSuperAdmin, isAdmin } = usePermissions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   // Define all navigation items with their required modules
   const allNavItems = [
@@ -46,10 +48,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Banks', href: '/banks', icon: Building2, module: MODULES.BANKS, adminOnly: true },
     { name: 'Approvals', href: '/approvals', icon: UserCheck, module: MODULES.APPROVALS, adminOnly: true },
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
-    { name: 'User Management', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
-    // Admin Management Pages
-    { name: 'Call Management', href: '/call-management', icon: ClipboardList, module: MODULES.CALLS, adminOnly: true },
-    { name: 'Stock Management', href: '/stock-management', icon: Warehouse, module: MODULES.STOCK, adminOnly: true },
+    { name: 'Users', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
   ];
 
   // Filter navigation based on permissions
@@ -67,6 +66,7 @@ export function Layout({ children }: LayoutProps) {
   const handleSignOut = async () => {
     try {
       await signOut();
+      setProfileMenuOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -75,17 +75,19 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <div className="bg-blue-600 p-2 rounded-lg">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-                <span className="ml-3 text-xl font-bold text-gray-900">Field Service</span>
+            {/* Logo */}
+            <div className="flex-shrink-0 flex items-center">
+              <div className="bg-blue-600 p-2 rounded-lg">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
+              <span className="ml-3 text-xl font-bold text-gray-900 hidden sm:block">Field Service</span>
+            </div>
 
-              <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
+            {/* Desktop Navigation - with horizontal scroll */}
+            <div className="hidden md:flex md:flex-1 md:items-center md:mx-4">
+              <div className="flex space-x-1 overflow-x-auto scrollbar-hide flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {navigation.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -94,14 +96,14 @@ export function Layout({ children }: LayoutProps) {
                       to={item.href}
                       end={item.href === '/dashboard'}
                       className={({ isActive }) =>
-                        `inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition ${
+                        `flex-shrink-0 inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
                           isActive
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }`
                       }
                     >
-                      <Icon className="w-5 h-5 mr-2" />
+                      <Icon className="w-4 h-4 mr-2" />
                       {item.name}
                     </NavLink>
                   );
@@ -109,31 +111,56 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            <div className="hidden sm:flex sm:items-center sm:space-x-4">
+            {/* Right Side - Search, Notifications, Profile */}
+            <div className="hidden md:flex md:items-center md:space-x-3 flex-shrink-0">
               {/* Global Search */}
               <GlobalSearch />
 
+              {/* Notifications */}
               <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
-                <Bell className="w-6 h-6" />
+                <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
 
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{profile?.role}</p>
-                </div>
+              {/* Profile Menu */}
+              <div className="relative">
                 <button
-                  onClick={handleSignOut}
-                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                  title="Sign Out"
+                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                  className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
+                  </div>
                 </button>
+
+                {/* Profile Dropdown */}
+                {profileMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                      <p className="text-xs text-gray-500">{profile?.email}</p>
+                      <p className="text-xs text-gray-500 capitalize mt-1">
+                        Role: {profile?.role?.replace('_', ' ')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center sm:hidden">
+            {/* Mobile Menu Button */}
+            <div className="flex items-center md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
@@ -144,55 +171,72 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-200">
-            <div className="pt-2 pb-3 space-y-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    end={item.href === '/dashboard'}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-3 text-base font-medium ${
-                        isActive
-                          ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`
-                    }
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.name}
-                  </NavLink>
-                );
-              })}
-            </div>
-            <div className="pt-4 pb-3 border-t border-gray-200">
-              <div className="flex items-center px-4 mb-3">
-                <div>
-                  <p className="text-base font-medium text-gray-900">{profile?.full_name}</p>
-                  <p className="text-sm text-gray-500 capitalize">{profile?.role}</p>
-                </div>
+          <div className="md:hidden border-t border-gray-200 bg-white">
+            <div className="max-h-[calc(100vh-4rem)] overflow-y-auto">
+              {/* Navigation Links */}
+              <div className="pt-2 pb-3 space-y-1">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      end={item.href === '/dashboard'}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center px-4 py-3 text-base font-medium ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`
+                      }
+                    >
+                      <Icon className="w-5 h-5 mr-3" />
+                      {item.name}
+                    </NavLink>
+                  );
+                })}
               </div>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50"
-              >
-                <LogOut className="w-5 h-5 mr-3" />
-                Sign Out
-              </button>
+              
+              {/* Profile Section */}
+              <div className="pt-4 pb-3 border-t border-gray-200">
+                <div className="flex items-center px-4 mb-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-base font-medium text-gray-900">{profile?.full_name}</p>
+                    <p className="text-sm text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="w-5 h-5 mr-3" />
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         )}
       </nav>
 
       <main className="pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </div>
       </main>
+
+      {/* Click outside to close profile menu */}
+      {profileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setProfileMenuOpen(false)}
+        />
+      )}
     </div>
   );
 }
