@@ -6,7 +6,7 @@
 import { supabase } from './supabase';
 
 const CACHE_VERSION_KEY = 'app_cache_version';
-const CURRENT_VERSION = '1.0.0'; // Update this when you need to force cache clear
+const CURRENT_VERSION = '1.0.1'; // Updated: Fixed RLS recursive dependencies
 
 /**
  * Check if cache version matches current version
