@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { GoogleMap, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { MapProvider, isGoogleMapsConfigured } from './MapProvider';
-import { MapPin, User, Phone, Clock, AlertTriangle } from 'lucide-react';
+import { MapPin, User, Phone, Clock, AlertTriangle, Store } from 'lucide-react';
 
 interface Engineer {
   id: string;
@@ -28,11 +28,24 @@ interface Call {
   scheduled_date?: string;
 }
 
+interface Merchant {
+  id: string;
+  mid: string;
+  merchant_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  city?: string;
+  state?: string;
+  phone?: string;
+}
+
 interface AdminMapProps {
   engineers: Engineer[];
   calls: Call[];
+  merchants?: Merchant[];
   onEngineerClick?: (engineer: Engineer) => void;
   onCallClick?: (call: Call) => void;
+  onMerchantClick?: (merchant: Merchant) => void;
   height?: string;
   showClustering?: boolean;
   defaultCenter?: { lat: number; lng: number };
@@ -63,17 +76,23 @@ const ENGINEER_STATUS_COLORS: Record<string, string> = {
   offline: '#9CA3AF',
 };
 
+// Merchant marker color
+const MERCHANT_COLOR = '#8B5CF6'; // purple
+
 function AdminMapContent({
   engineers,
   calls,
+  merchants = [],
   onEngineerClick,
   onCallClick,
+  onMerchantClick,
   showClustering = true,
   defaultCenter = DEFAULT_CENTER,
   defaultZoom = DEFAULT_ZOOM,
 }: AdminMapProps) {
   const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -95,11 +114,17 @@ function AdminMapContent({
     [calls]
   );
 
+  const validMerchants = useMemo(
+    () => merchants.filter(m => m.latitude != null && m.longitude != null),
+    [merchants]
+  );
+
   // Calculate center based on markers
   const center = useMemo(() => {
     const allPoints = [
       ...validEngineers.map(e => ({ lat: e.latitude!, lng: e.longitude! })),
       ...validCalls.map(c => ({ lat: c.latitude!, lng: c.longitude! })),
+      ...validMerchants.map(m => ({ lat: m.latitude!, lng: m.longitude! })),
     ];
 
     if (allPoints.length === 0) return defaultCenter;
@@ -107,18 +132,27 @@ function AdminMapContent({
     const avgLat = allPoints.reduce((sum, p) => sum + p.lat, 0) / allPoints.length;
     const avgLng = allPoints.reduce((sum, p) => sum + p.lng, 0) / allPoints.length;
     return { lat: avgLat, lng: avgLng };
-  }, [validEngineers, validCalls, defaultCenter]);
+  }, [validEngineers, validCalls, validMerchants, defaultCenter]);
 
   const handleEngineerClick = (engineer: Engineer) => {
     setSelectedEngineer(engineer);
     setSelectedCall(null);
+    setSelectedMerchant(null);
     onEngineerClick?.(engineer);
   };
 
   const handleCallClick = (call: Call) => {
     setSelectedCall(call);
     setSelectedEngineer(null);
+    setSelectedMerchant(null);
     onCallClick?.(call);
+  };
+
+  const handleMerchantClick = (merchant: Merchant) => {
+    setSelectedMerchant(merchant);
+    setSelectedEngineer(null);
+    setSelectedCall(null);
+    onMerchantClick?.(merchant);
   };
 
   // Fit bounds to show all markers
@@ -138,10 +172,15 @@ function AdminMapContent({
       hasPoints = true;
     });
 
+    validMerchants.forEach(m => {
+      bounds.extend({ lat: m.latitude!, lng: m.longitude! });
+      hasPoints = true;
+    });
+
     if (hasPoints) {
       map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
     }
-  }, [map, validEngineers, validCalls]);
+  }, [map, validEngineers, validCalls, validMerchants]);
 
   const engineerMarkers = validEngineers.map(engineer => (
     <Marker
@@ -175,6 +214,24 @@ function AdminMapContent({
         anchor: new google.maps.Point(12, 22),
       }}
       title={`${call.call_number} - ${call.client_name}`}
+    />
+  ));
+
+  const merchantMarkers = validMerchants.map(merchant => (
+    <Marker
+      key={`merchant-${merchant.id}`}
+      position={{ lat: merchant.latitude!, lng: merchant.longitude! }}
+      onClick={() => handleMerchantClick(merchant)}
+      icon={{
+        path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10',
+        scale: 1.2,
+        fillColor: MERCHANT_COLOR,
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 1.5,
+        anchor: new google.maps.Point(12, 22),
+      }}
+      title={merchant.merchant_name}
     />
   ));
 
@@ -221,6 +278,24 @@ function AdminMapContent({
                       title={engineer.name}
                     />
                   ))}
+                  {validMerchants.map(merchant => (
+                    <Marker
+                      key={`merchant-${merchant.id}`}
+                      position={{ lat: merchant.latitude!, lng: merchant.longitude! }}
+                      onClick={() => handleMerchantClick(merchant)}
+                      clusterer={clusterer}
+                      icon={{
+                        path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10',
+                        scale: 1.0,
+                        fillColor: MERCHANT_COLOR,
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 1.5,
+                        anchor: new google.maps.Point(12, 22),
+                      }}
+                      title={merchant.merchant_name}
+                    />
+                  ))}
                 </>
               )}
             </MarkerClusterer>
@@ -230,6 +305,7 @@ function AdminMapContent({
           <>
             {engineerMarkers}
             {callMarkers}
+            {merchantMarkers}
           </>
         )}
 
@@ -315,10 +391,39 @@ function AdminMapContent({
             </div>
           </InfoWindow>
         )}
+
+        {/* Merchant Info Window */}
+        {selectedMerchant && selectedMerchant.latitude && selectedMerchant.longitude && (
+          <InfoWindow
+            position={{ lat: selectedMerchant.latitude, lng: selectedMerchant.longitude }}
+            onCloseClick={() => setSelectedMerchant(null)}
+          >
+            <div className="p-2 min-w-[200px]">
+              <div className="flex items-center gap-2 mb-2">
+                <Store className="w-4 h-4" style={{ color: MERCHANT_COLOR }} />
+                <span className="font-semibold">{selectedMerchant.merchant_name}</span>
+              </div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div className="text-xs font-mono text-gray-500">
+                  MID: {selectedMerchant.mid}
+                </div>
+                {selectedMerchant.city && selectedMerchant.state && (
+                  <div>{selectedMerchant.city}, {selectedMerchant.state}</div>
+                )}
+                {selectedMerchant.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    {selectedMerchant.phone}
+                  </div>
+                )}
+              </div>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 text-xs">
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 text-xs max-h-[300px] overflow-y-auto">
         <div className="font-semibold mb-2">Legend</div>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -346,6 +451,11 @@ function AdminMapContent({
             <MapPin className="w-3 h-3 text-green-500" />
             <span>Low Priority</span>
           </div>
+          <div className="border-t my-2" />
+          <div className="flex items-center gap-2">
+            <Store className="w-3 h-3" style={{ color: MERCHANT_COLOR }} />
+            <span>Merchant Location</span>
+          </div>
         </div>
       </div>
 
@@ -359,7 +469,7 @@ function AdminMapContent({
 
       {/* Stats Overlay */}
       <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 text-xs">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div>
             <span className="text-gray-500">Engineers:</span>{' '}
             <span className="font-semibold">{validEngineers.length}</span>
@@ -367,6 +477,10 @@ function AdminMapContent({
           <div>
             <span className="text-gray-500">Calls:</span>{' '}
             <span className="font-semibold">{validCalls.length}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Merchants:</span>{' '}
+            <span className="font-semibold">{validMerchants.length}</span>
           </div>
         </div>
       </div>
