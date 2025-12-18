@@ -1,21 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { clearAllStorage } from '../lib/cacheManager';
 import type { Database } from '../lib/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
 // Check if test accounts are enabled
-// NOTE: Enabled on localhost, Vercel previews (*.vercel.app), or with explicit env var
-// SECURITY: For true production, use a custom domain to disable test accounts
+// NOTE: ONLY enabled on localhost for development
+// SECURITY: Disabled on all Vercel deployments for production safety
 const TEST_ACCOUNTS_ENABLED = (
-  // Development mode (localhost)
-  import.meta.env.DEV ||
+  // Development mode (localhost ONLY)
   window.location.hostname === 'localhost' ||
-  // Vercel preview/development deployments (for team testing)
-  window.location.hostname.endsWith('.vercel.app') ||
-  // Explicit enable via environment variable (non-production only)
-  (!import.meta.env.PROD && import.meta.env.VITE_ENABLE_TEST_ACCOUNTS === 'true')
+  window.location.hostname === '127.0.0.1'
 );
 
 // Debug logging helper - only logs in development
@@ -48,7 +45,7 @@ const createTestProfile = (overrides: Partial<UserProfile>): UserProfile => ({
   ...overrides,
 });
 
-// Simple test accounts for easy testing
+// Simple test accounts for easy testing (LOCALHOST ONLY)
 // Login with: super / super  OR  admin / admin  OR  engineer / engineer
 const TEST_ACCOUNTS: Record<string, { password: string; user: Partial<User>; profile: UserProfile }> = {
   'admin': {
@@ -285,30 +282,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Clear test user if present
-      localStorage.removeItem('test_user');
-
-      // Sign out from Supabase
-      await supabase.auth.signOut();
+      debugLog('Signing out user...');
       
-      // Clear ALL localStorage (removes any cached data)
-      localStorage.clear();
-      
-      // Clear ALL sessionStorage
-      sessionStorage.clear();
-      
-      // Clear React state
+      // Clear React state first
       setUser(null);
       setProfile(null);
       setSession(null);
+      
+      // Use cache manager to clear all storage
+      await clearAllStorage();
+      
+      debugLog('Sign out complete, redirecting to home page');
       
       // Force a hard reload to clear all cached React state and start fresh
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       // Even if there's an error, clear everything and redirect
-      localStorage.clear();
-      sessionStorage.clear();
+      await clearAllStorage();
       setUser(null);
       setProfile(null);
       setSession(null);
