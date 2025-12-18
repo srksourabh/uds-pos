@@ -7,8 +7,8 @@ import { IssueDeviceModal } from '../components/IssueDeviceModal';
 import { AddDeviceModal } from '../components/AddDeviceModal';
 
 type Device = Database['public']['Tables']['devices']['Row'] & {
-  bank?: Database['public']['Tables']['banks']['Row'];
-  assigned_engineer?: Database['public']['Tables']['user_profiles']['Row'];
+  banks?: Database['public']['Tables']['banks']['Row'];
+  user_profiles?: Database['public']['Tables']['user_profiles']['Row'];
 };
 
 export function Devices() {
@@ -40,8 +40,8 @@ export function Devices() {
         .from('devices')
         .select(`
           *,
-          bank:device_bank(id, name, code),
-          assigned_engineer:assigned_to(id, full_name)
+          banks!device_bank(id, name, code),
+          user_profiles!assigned_to(id, full_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -255,7 +255,7 @@ export function Devices() {
                       {device.model}
                     </td>
                     <td className="table-td-responsive whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{device.bank?.name || 'N/A'}</span>
+                      <span className="text-sm text-gray-900">{device.banks?.name || 'N/A'}</span>
                     </td>
                     <td className="table-td-responsive whitespace-nowrap">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${statusColors[device.status || 'warehouse']}`}>
@@ -263,7 +263,7 @@ export function Devices() {
                       </span>
                     </td>
                     <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
-                      {device.assigned_engineer?.full_name || '-'}
+                      {device.user_profiles?.full_name || '-'}
                     </td>
                     <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.installed_at_client || '-'}
