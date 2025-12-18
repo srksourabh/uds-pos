@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, AlertCircle, Smartphone, Mail, ArrowLeft } from 'lucide-react';
+import { Building2, AlertCircle, Smartphone, Mail, ArrowLeft, Copy, Check } from 'lucide-react';
 
 type LoginMethod = 'email' | 'phone';
 type PhoneStep = 'enter-phone' | 'enter-otp';
@@ -24,6 +24,7 @@ export function EnhancedLogin() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Wait for auth state to be determined before making navigation decisions
   if (authLoading) {
@@ -49,8 +50,11 @@ export function EnhancedLogin() {
     return <Navigate to="/profile-setup" replace />;
   }
 
-  // If user exists but profile is inactive/rejected, show login form
-  // (they can sign out or contact admin)
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleEmailSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -96,7 +100,7 @@ export function EnhancedLogin() {
       startResendCountdown();
     } catch (err: any) {
       if (err.message?.includes('Invalid')) {
-        setError('Please enter a valid phone number with country code (e.g., +1234567890)');
+        setError('Please enter a valid phone number with country code (e.g., +919876543210)');
       } else {
         setError('Failed to send verification code. Please try again.');
       }
@@ -194,16 +198,16 @@ export function EnhancedLogin() {
             <form onSubmit={handleEmailSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="form-label-responsive">
-                  Email or Username
+                  Email Address
                 </label>
                 <input
                   id="email"
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  placeholder="admin or admin@example.com"
+                  placeholder="admin@uds.com"
                 />
               </div>
 
@@ -256,10 +260,10 @@ export function EnhancedLogin() {
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  placeholder="+1234567890"
+                  placeholder="+919876543210"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Include country code (e.g., +1 for US)
+                  Include country code (e.g., +91 for India)
                 </p>
               </div>
 
@@ -346,17 +350,132 @@ export function EnhancedLogin() {
             </button>
           </div>
 
-          {/* Test Credentials Info */}
-          <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <p className="text-xs font-medium text-slate-600 mb-2">Test Credentials (Dev Mode):</p>
-            <div className="space-y-1 text-xs text-slate-500">
-              <p><span className="font-medium">Admin:</span> admin / admin</p>
-              <p><span className="font-medium">Engineer:</span> test / test</p>
-              <p><span className="font-medium">Super Admin:</span> super / super</p>
-            </div>
-            <p className="mt-2 text-[10px] text-slate-400">
-              Or use Supabase accounts: admin@uds.com / Admin@123
+          {/* Test Credentials - Production Accounts */}
+          <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-slate-50 border-2 border-blue-200 rounded-lg">
+            <p className="text-sm font-bold text-blue-900 mb-3 text-center flex items-center justify-center gap-2">
+              🔑 Test Account Credentials
             </p>
+            
+            <div className="space-y-3">
+              {/* Super Admin */}
+              <div className="bg-white rounded-lg p-3 border border-purple-200">
+                <p className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  SUPER ADMIN
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Email:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded font-mono">super@uds.com</code>
+                      <button
+                        onClick={() => handleCopy('super@uds.com', 'super-email')}
+                        className="p-1 hover:bg-purple-100 rounded transition"
+                        title="Copy email"
+                      >
+                        {copiedField === 'super-email' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Password:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded font-mono">Super@123</code>
+                      <button
+                        onClick={() => handleCopy('Super@123', 'super-pass')}
+                        className="p-1 hover:bg-purple-100 rounded transition"
+                        title="Copy password"
+                      >
+                        {copiedField === 'super-pass' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin */}
+              <div className="bg-white rounded-lg p-3 border border-blue-200">
+                <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  ADMIN
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Email:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded font-mono">admin@uds.com</code>
+                      <button
+                        onClick={() => handleCopy('admin@uds.com', 'admin-email')}
+                        className="p-1 hover:bg-blue-100 rounded transition"
+                        title="Copy email"
+                      >
+                        {copiedField === 'admin-email' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Password:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded font-mono">Admin@123</code>
+                      <button
+                        onClick={() => handleCopy('Admin@123', 'admin-pass')}
+                        className="p-1 hover:bg-blue-100 rounded transition"
+                        title="Copy password"
+                      >
+                        {copiedField === 'admin-pass' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Engineer */}
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  FIELD ENGINEER
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Phone:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded font-mono">+919876543210</code>
+                      <button
+                        onClick={() => handleCopy('+919876543210', 'engineer-phone')}
+                        className="p-1 hover:bg-green-100 rounded transition"
+                        title="Copy phone"
+                      >
+                        {copiedField === 'engineer-phone' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic">
+                    Use phone login method with OTP verification
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <p className="text-[10px] text-center text-gray-500">
+                💡 Click copy icons to copy credentials • For production, update these accounts
+              </p>
+            </div>
           </div>
         </div>
       </div>

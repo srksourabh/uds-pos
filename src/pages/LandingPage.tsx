@@ -1,32 +1,9 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Shield, UserCog, Zap, Building2, ChevronRight } from 'lucide-react';
 
 export function LandingPage() {
-  const { signIn } = useAuth();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState('');
-
-  const handleTestLogin = async (role: 'super' | 'admin' | 'engineer') => {
-    try {
-      setLoading(role);
-      setError('');
-      
-      // Use the test account credentials
-      await signIn(role, role);
-      
-      // Wait a moment for state to update
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Hard redirect to dashboard (fresh page load with clean state)
-      window.location.href = '/dashboard';
-    } catch (err: any) {
-      console.error('Test login error:', err);
-      setError('Login failed');
-    } finally {
-      setLoading(null);
-    }
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
@@ -40,102 +17,131 @@ export function LandingPage() {
           <p className="text-slate-400">Field Service Management System</p>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          </div>
-        )}
-
-        {/* Test Login Buttons Section */}
+        {/* Quick Access Section */}
         <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent flex-1"></div>
-            <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wider">
-              Quick Test Login
+            <div className="h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent flex-1"></div>
+            <p className="text-blue-400 text-xs font-semibold uppercase tracking-wider">
+              Quick Access
             </p>
-            <div className="h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent flex-1"></div>
+            <div className="h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent flex-1"></div>
           </div>
 
           <div className="space-y-3">
-            {/* Super Admin Test Button */}
+            {/* Super Admin Button */}
             <button
-              onClick={() => handleTestLogin('super')}
-              disabled={loading !== null}
-              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-purple-600/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => navigate('/login')}
+              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-purple-600/30 active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <Shield className="w-6 h-6" />
                 <div className="text-left">
                   <div className="font-bold">Super Admin</div>
                   <div className="text-xs text-purple-100 opacity-90">
-                    {loading === 'super' ? 'Logging in...' : 'Full system access'}
+                    Full system access
                   </div>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            {/* Admin Test Button */}
+            {/* Admin Button */}
             <button
-              onClick={() => handleTestLogin('admin')}
-              disabled={loading !== null}
-              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => navigate('/login')}
+              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-blue-600/30 active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <UserCog className="w-6 h-6" />
                 <div className="text-left">
                   <div className="font-bold">Admin</div>
                   <div className="text-xs text-blue-100 opacity-90">
-                    {loading === 'admin' ? 'Logging in...' : 'Management access'}
+                    Management access
                   </div>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            {/* Engineer Test Button */}
+            {/* Engineer Button */}
             <button
-              onClick={() => handleTestLogin('engineer')}
-              disabled={loading !== null}
-              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-green-600/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => navigate('/login')}
+              className="group w-full flex items-center justify-between gap-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-green-600/30 active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <Building2 className="w-6 h-6" />
                 <div className="text-left">
                   <div className="font-bold">Field Engineer</div>
                   <div className="text-xs text-green-100 opacity-90">
-                    {loading === 'engineer' ? 'Logging in...' : 'Field operations'}
+                    Field operations
                   </div>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-
-          <p className="text-center text-slate-400 text-xs mt-4">
-            ⚠️ Testing mode - These buttons will be removed in production
-          </p>
         </div>
 
-        {/* Testing Environment Notice */}
-        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4">
-          <p className="text-slate-400 text-sm text-center mb-3">
-            <span className="font-semibold text-slate-300">Development Mode</span>
+        {/* Test Credentials Info */}
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
+          <p className="text-slate-300 font-semibold text-sm text-center mb-4">
+            🔑 Test Account Credentials
           </p>
-          <div className="space-y-1 text-xs text-slate-500">
-            <div className="flex items-center justify-between">
-              <span>Super Admin:</span>
-              <code className="text-purple-400 bg-purple-950/30 px-2 py-1 rounded">super / super</code>
+          <div className="space-y-3">
+            <div className="bg-purple-950/30 border border-purple-800/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-semibold text-purple-300">SUPER ADMIN</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Email:</span>
+                  <code className="text-purple-300 bg-purple-950/50 px-2 py-1 rounded">super@uds.com</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Password:</span>
+                  <code className="text-purple-300 bg-purple-950/50 px-2 py-1 rounded">Super@123</code>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Admin:</span>
-              <code className="text-blue-400 bg-blue-950/30 px-2 py-1 rounded">admin / admin</code>
+
+            <div className="bg-blue-950/30 border border-blue-800/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <UserCog className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-semibold text-blue-300">ADMIN</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Email:</span>
+                  <code className="text-blue-300 bg-blue-950/50 px-2 py-1 rounded">admin@uds.com</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Password:</span>
+                  <code className="text-blue-300 bg-blue-950/50 px-2 py-1 rounded">Admin@123</code>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Engineer:</span>
-              <code className="text-green-400 bg-green-950/30 px-2 py-1 rounded">engineer / engineer</code>
+
+            <div className="bg-green-950/30 border border-green-800/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-4 h-4 text-green-400" />
+                <span className="text-xs font-semibold text-green-300">ENGINEER</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Phone:</span>
+                  <code className="text-green-300 bg-green-950/50 px-2 py-1 rounded">+919876543210</code>
+                </div>
+                <div className="text-slate-500 text-[10px] mt-1">
+                  Use phone login with OTP
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-700/50">
+            <p className="text-center text-slate-500 text-xs">
+              Click any button above to go to login page
+            </p>
           </div>
         </div>
       </div>
