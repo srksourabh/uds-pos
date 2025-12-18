@@ -58,6 +58,17 @@ interface MapCall {
   scheduled_date?: string;
 }
 
+interface MapMerchant {
+  id: string;
+  mid: string;
+  merchant_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  city?: string;
+  state?: string;
+  phone?: string;
+}
+
 export function Dashboard() {
   const { profile, isAdmin, isSuperAdmin } = useAuth();
   const isEngineer = profile?.role === 'engineer';
@@ -79,6 +90,7 @@ export function Dashboard() {
   const [chartsLoading, setChartsLoading] = useState(true);
   const [mapEngineers, setMapEngineers] = useState<MapEngineer[]>([]);
   const [mapCalls, setMapCalls] = useState<MapCall[]>([]);
+  const [mapMerchants, setMapMerchants] = useState<MapMerchant[]>([]);
   const [showMap, setShowMap] = useState(true);
 
   // Wait for auth to be ready before loading data
@@ -298,8 +310,25 @@ export function Dashboard() {
         scheduled_date: call.scheduled_date,
       }));
 
+      // Load merchants with location data
+      const { data: merchants } = await supabase
+        .from('merchants')
+        .select('id, mid, merchant_name, latitude, longitude, city, state, phone');
+
+      const mappedMerchants: MapMerchant[] = (merchants || []).map(m => ({
+        id: m.id,
+        mid: m.mid,
+        merchant_name: m.merchant_name,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        city: m.city ?? undefined,
+        state: m.state ?? undefined,
+        phone: m.phone ?? undefined,
+      }));
+
       setMapEngineers(mappedEngineers);
       setMapCalls(mappedCalls);
+      setMapMerchants(mappedMerchants);
     } catch (error) {
       console.error('Error loading map data:', error);
     }
@@ -530,7 +559,7 @@ export function Dashboard() {
               <MapIcon className="w-5 h-5 text-blue-500" />
               <h2 className="text-lg md:text-xl font-semibold text-gray-900">Live Map</h2>
               <span className="text-sm text-gray-500">
-                ({mapEngineers.filter(e => e.latitude).length} engineers, {mapCalls.filter(c => c.latitude).length} calls)
+                ({mapEngineers.filter(e => e.latitude).length} engineers, {mapCalls.filter(c => c.latitude).length} calls, {mapMerchants.length} merchants)
               </span>
             </div>
             <button
@@ -544,6 +573,7 @@ export function Dashboard() {
             <AdminMap
               engineers={mapEngineers}
               calls={mapCalls}
+              merchants={mapMerchants}
               height="450px"
               showClustering={true}
             />
