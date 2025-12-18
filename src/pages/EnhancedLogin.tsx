@@ -344,7 +344,7 @@ export function EnhancedLogin() {
               ) : (
                 <>
                   <Mail className="w-4 h-4" />
-                  Sign in with email (Admins)
+                  Sign in with email (All Users)
                 </>
               )}
             </button>
@@ -449,23 +449,39 @@ export function EnhancedLogin() {
                 </p>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-600 font-medium">Phone:</span>
+                    <span className="text-xs text-gray-600 font-medium">Email:</span>
                     <div className="flex items-center gap-1">
-                      <code className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded font-mono">+919876543210</code>
+                      <code className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded font-mono">engineer@uds.com</code>
                       <button
-                        onClick={() => handleCopy('+919876543210', 'engineer-phone')}
+                        onClick={() => handleCopy('engineer@uds.com', 'engineer-email')}
                         className="p-1 hover:bg-green-100 rounded transition"
-                        title="Copy phone"
+                        title="Copy email"
                       >
-                        {copiedField === 'engineer-phone' ? 
+                        {copiedField === 'engineer-email' ? 
                           <Check className="w-3 h-3 text-green-600" /> : 
                           <Copy className="w-3 h-3 text-gray-400" />
                         }
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-gray-500 italic">
-                    Use phone login method with OTP verification
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Password:</span>
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded font-mono">Engineer@123</code>
+                      <button
+                        onClick={() => handleCopy('Engineer@123', 'engineer-pass')}
+                        className="p-1 hover:bg-green-100 rounded transition"
+                        title="Copy password"
+                      >
+                        {copiedField === 'engineer-pass' ? 
+                          <Check className="w-3 h-3 text-green-600" /> : 
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic mt-1">
+                    Or use phone: +919876543210 with OTP
                   </p>
                 </div>
               </div>
@@ -473,7 +489,7 @@ export function EnhancedLogin() {
 
             <div className="mt-3 pt-3 border-t border-blue-200">
               <p className="text-[10px] text-center text-gray-500">
-                💡 Click copy icons to copy credentials • For production, update these accounts
+                💡 Click copy icons to copy credentials • Passwords updated in database
               </p>
             </div>
           </div>

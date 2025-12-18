@@ -128,11 +128,15 @@ export function LandingPage() {
               </div>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Phone:</span>
-                  <code className="text-green-300 bg-green-950/50 px-2 py-1 rounded">+919876543210</code>
+                  <span className="text-slate-400">Email:</span>
+                  <code className="text-green-300 bg-green-950/50 px-2 py-1 rounded">engineer@uds.com</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Password:</span>
+                  <code className="text-green-300 bg-green-950/50 px-2 py-1 rounded">Engineer@123</code>
                 </div>
                 <div className="text-slate-500 text-[10px] mt-1">
-                  Use phone login with OTP
+                  Or use phone: +919876543210 with OTP
                 </div>
               </div>
             </div>
