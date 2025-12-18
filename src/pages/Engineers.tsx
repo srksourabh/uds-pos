@@ -5,7 +5,7 @@ import type { Database } from '../lib/database.types';
 import { AddEngineerModal } from '../components/AddEngineerModal';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
-  bank?: Database['public']['Tables']['banks']['Row'];
+  banks?: Database['public']['Tables']['banks']['Row'];
 };
 
 export function Engineers() {
@@ -33,7 +33,7 @@ export function Engineers() {
         .from('user_profiles')
         .select(`
           *,
-          bank:bank_id(id, name, code)
+          banks!bank_id(id, name, code)
         `)
         .eq('role', 'engineer')
         .order('full_name', { ascending: true });
@@ -133,7 +133,7 @@ export function Engineers() {
                 <div className="pt-3 border-t border-gray-200">
                   <p className="text-xs text-gray-500 mb-1">Assigned Bank</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {engineer.bank?.name || 'Not assigned'}
+                    {engineer.banks?.name || 'Not assigned'}
                   </p>
                 </div>
               </div>
