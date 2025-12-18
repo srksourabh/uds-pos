@@ -76,18 +76,18 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            {/* Logo */}
+          <div className="flex justify-between items-center h-16 gap-4">
+            {/* Logo - Fixed Width */}
             <div className="flex-shrink-0 flex items-center">
               <div className="bg-blue-600 p-2 rounded-lg">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
-              <span className="ml-3 text-xl font-bold text-gray-900 hidden sm:block">Field Service</span>
+              <span className="ml-3 text-xl font-bold text-gray-900 hidden sm:block whitespace-nowrap">Field Service</span>
             </div>
 
-            {/* Desktop Navigation - with horizontal scroll */}
-            <div className="hidden md:flex md:flex-1 md:items-center md:mx-4">
-              <div className="flex space-x-1 overflow-x-auto scrollbar-hide flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* Desktop Navigation - Scrollable with max-width */}
+            <div className="hidden md:flex md:items-center md:overflow-hidden" style={{ maxWidth: 'calc(100% - 400px)' }}>
+              <div className="flex space-x-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {navigation.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -111,7 +111,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            {/* Right Side - Search, Notifications, Profile, Logout */}
+            {/* Right Side - Fixed Width, Always Visible */}
             <div className="hidden md:flex md:items-center md:space-x-3 flex-shrink-0">
               {/* Global Search */}
               <GlobalSearch />
@@ -122,46 +122,40 @@ export function Layout({ children }: LayoutProps) {
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
 
-              {/* Profile Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
-                >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="hidden lg:block text-left">
-                    <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
-                  </div>
-                </button>
+              {/* Profile Info - Compact */}
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
+              >
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+              </button>
 
-                {/* Profile Dropdown */}
-                {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                      <p className="text-xs text-gray-500">{profile?.email}</p>
-                      <p className="text-xs text-gray-500 capitalize mt-1">
-                        Role: {profile?.role?.replace('_', ' ')}
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </button>
+              {/* Profile Dropdown */}
+              {profileMenuOpen && (
+                <div className="absolute right-24 top-14 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                    <p className="text-xs text-gray-500">{profile?.email}</p>
+                    <p className="text-xs text-gray-500 capitalize mt-1">
+                      Role: {profile?.role?.replace('_', ' ')}
+                    </p>
                   </div>
-                )}
-              </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
 
               {/* DIRECT LOGOUT BUTTON - Always Visible */}
               <button
                 onClick={handleSignOut}
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm"
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm whitespace-nowrap"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
