@@ -19,8 +19,8 @@ type Device = {
   assigned_to: string | null;
   device_bank: string;
   created_at: string;
-  bank?: { id: string; name: string; code: string };
-  engineer?: { id: string; full_name: string; phone: string | null };
+  banks?: { id: string; name: string; code: string };
+  user_profiles?: { id: string; full_name: string; phone: string | null };
 };
 
 type Engineer = {
@@ -115,8 +115,8 @@ export function StockManagement() {
       const [devicesRes, engineersRes, warehousesRes, movementsRes] = await Promise.all([
         supabase.from('devices').select(`
           *,
-          bank:device_bank(id, name, code),
-          engineer:assigned_to(id, full_name, phone)
+          banks!device_bank(id, name, code),
+          user_profiles!assigned_to(id, full_name, phone)
         `).order('created_at', { ascending: false }),
         supabase.from('user_profiles').select('*').eq('role', 'engineer').eq('status', 'active'),
         supabase.from('warehouses').select('*').eq('active', true),
@@ -789,8 +789,8 @@ export function StockManagement() {
                         {device.current_location || '-'}
                       </td>
                       <td className="table-td-responsive text-sm">
-                        {device.engineer ? (
-                          <div className="text-gray-900">{device.engineer.full_name}</div>
+                        {device.user_profiles ? (
+                          <div className="text-gray-900">{device.user_profiles.full_name}</div>
                         ) : (
                           <span className="text-gray-400 italic">-</span>
                         )}
