@@ -111,7 +111,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            {/* Right Side - Search, Notifications, Profile */}
+            {/* Right Side - Search, Notifications, Profile, Logout */}
             <div className="hidden md:flex md:items-center md:space-x-3 flex-shrink-0">
               {/* Global Search */}
               <GlobalSearch />
@@ -157,6 +157,15 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 )}
               </div>
+
+              {/* DIRECT LOGOUT BUTTON - Always Visible */}
+              <button
+                onClick={handleSignOut}
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -211,12 +220,14 @@ export function Layout({ children }: LayoutProps) {
                     <p className="text-sm text-gray-500 capitalize">{profile?.role?.replace('_', ' ')}</p>
                   </div>
                 </div>
+                
+                {/* MOBILE LOGOUT BUTTON - Large and Prominent */}
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50"
+                  className="mx-4 mb-3 w-[calc(100%-2rem)] flex items-center justify-center px-4 py-3 text-base font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm"
                 >
-                  <LogOut className="w-5 h-5 mr-3" />
-                  Sign Out
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Logout
                 </button>
               </div>
             </div>
