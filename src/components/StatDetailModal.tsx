@@ -25,7 +25,7 @@ interface Device {
   id: string;
   serial_number: string;
   model: string;
-  brand: string;
+  make: string;
   status: string;
   tid?: string;
   mid?: string;
@@ -43,13 +43,12 @@ interface Call {
   client_address?: string;
   scheduled_date?: string;
   assigned_engineer?: string;
-  user_profiles?: { full_name: string } | null;
 }
 
 interface Engineer {
   id: string;
   full_name: string;
-  employee_id?: string;
+  emp_id?: string;
   phone?: string;
   email?: string;
   active: boolean;
@@ -88,12 +87,12 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
       });
       setEngineerMap(engMap);
 
-      // Device-related stats
+      // Device-related stats - using correct column names: make (not brand)
       if (['totalDevices', 'warehouseDevices', 'issuedDevices', 'installedDevices', 'faultyDevices'].includes(statType)) {
         let query = supabase
           .from('devices')
           .select(`
-            id, serial_number, model, brand, status, tid, mid, assigned_to,
+            id, serial_number, model, make, status, tid, mid, assigned_to,
             banks!device_bank(name)
           `)
           .order('created_at', { ascending: false });
@@ -115,7 +114,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
           // Try simpler query without joins
           const { data: simpleData } = await supabase
             .from('devices')
-            .select('id, serial_number, model, brand, status, tid, mid, assigned_to')
+            .select('id, serial_number, model, make, status, tid, mid, assigned_to')
             .order('created_at', { ascending: false });
           setDevices((simpleData || []) as Device[]);
         } else {
@@ -152,11 +151,11 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
         setCalls((data || []) as Call[]);
       }
 
-      // Engineers stat
+      // Engineers stat - using correct column name: emp_id (not employee_id)
       if (statType === 'totalEngineers') {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('id, full_name, employee_id, phone, email, active, region')
+          .select('id, full_name, emp_id, phone, email, active, region')
           .eq('role', 'engineer')
           .order('full_name');
 
@@ -263,7 +262,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Make</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
@@ -278,8 +277,8 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
                           onClick={() => handleNavigate(`/devices?search=${device.serial_number}`)}
                         >
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{device.serial_number}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{device.model}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{device.brand}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{device.model || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{device.make || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{device.banks?.name || '-'}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(device.status)}`}>
@@ -436,7 +435,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
                           className="hover:bg-gray-50 cursor-pointer transition"
                           onClick={() => handleNavigate(`/engineers?search=${engineer.full_name}`)}
                         >
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{engineer.employee_id || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{engineer.emp_id || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{engineer.full_name}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{engineer.phone || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{engineer.region || '-'}</td>
