@@ -39,6 +39,7 @@ import { InTransit } from './pages/InTransit';
 import { UserManagement } from './pages/UserManagement';
 import { CallManagement } from './pages/CallManagement';
 import { StockManagement } from './pages/StockManagement';
+import { BulkImport } from './pages/BulkImport';
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -239,6 +240,16 @@ function App() {
                     <ProtectedRoute requireAdmin>
                       <Layout>
                         <StockManagement />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/bulk-import"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <BulkImport />
                       </Layout>
                     </ProtectedRoute>
                   }
