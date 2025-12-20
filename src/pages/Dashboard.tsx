@@ -313,10 +313,10 @@ export function Dashboard() {
         scheduled_date: call.scheduled_date,
       }));
 
-      // Load merchants with location data
+      // Load merchants with location data - FIXED: use contact_phone instead of phone
       const { data: merchants } = await supabase
         .from('merchants')
-        .select('id, mid, merchant_name, latitude, longitude, city, state, phone');
+        .select('id, mid, merchant_name, latitude, longitude, city, state, contact_phone');
 
       const mappedMerchants: MapMerchant[] = (merchants || []).map(m => ({
         id: m.id,
@@ -326,7 +326,7 @@ export function Dashboard() {
         longitude: m.longitude,
         city: m.city ?? undefined,
         state: m.state ?? undefined,
-        phone: m.phone ?? undefined,
+        phone: m.contact_phone ?? undefined,
       }));
 
       setMapEngineers(mappedEngineers);
