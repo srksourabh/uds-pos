@@ -55,9 +55,11 @@ export function Devices() {
   };
 
   const filteredDevices = devices.filter((device) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      device.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.model.toLowerCase().includes(searchTerm.toLowerCase());
+      (device.serial_number || '').toLowerCase().includes(searchLower) ||
+      (device.model || '').toLowerCase().includes(searchLower) ||
+      (device.make || '').toLowerCase().includes(searchLower);
     const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -169,7 +171,7 @@ export function Devices() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by serial number or model..."
+              placeholder="Search by serial number, model or make..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -252,7 +254,7 @@ export function Devices() {
                       </div>
                     </td>
                     <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
-                      {device.model}
+                      {device.model || '-'}
                     </td>
                     <td className="table-td-responsive whitespace-nowrap">
                       <span className="text-sm text-gray-900">{device.banks?.name || 'N/A'}</span>
