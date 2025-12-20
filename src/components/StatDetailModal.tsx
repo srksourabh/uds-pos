@@ -29,8 +29,8 @@ interface Device {
   status: string;
   tid?: string;
   mid?: string;
-  banks?: { name: string };
-  user_profiles?: { full_name: string };
+  banks?: { name: string } | null;
+  assigned_to?: string | null;
 }
 
 interface Call {
@@ -43,7 +43,7 @@ interface Call {
   client_address?: string;
   scheduled_date?: string;
   assigned_engineer?: string;
-  user_profiles?: { full_name: string };
+  user_profiles?: { full_name: string } | null;
 }
 
 interface Engineer {
@@ -62,6 +62,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
   const [devices, setDevices] = useState<Device[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
+  const [engineerMap, setEngineerMap] = useState<Map<string, string>>(new Map());
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -75,14 +76,25 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
   const loadData = async () => {
     setLoading(true);
     try {
+      // Load engineer names for lookups
+      const { data: allEngineers } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .eq('role', 'engineer');
+      
+      const engMap = new Map<string, string>();
+      (allEngineers || []).forEach(eng => {
+        engMap.set(eng.id, eng.full_name || 'Unknown');
+      });
+      setEngineerMap(engMap);
+
       // Device-related stats
       if (['totalDevices', 'warehouseDevices', 'issuedDevices', 'installedDevices', 'faultyDevices'].includes(statType)) {
         let query = supabase
           .from('devices')
           .select(`
-            id, serial_number, model, brand, status, tid, mid,
-            banks!device_bank(name),
-            user_profiles!assigned_to(full_name)
+            id, serial_number, model, brand, status, tid, mid, assigned_to,
+            banks!device_bank(name)
           `)
           .order('created_at', { ascending: false });
 
@@ -98,8 +110,17 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
         }
 
         const { data, error } = await query;
-        if (error) throw error;
-        setDevices(data as Device[]);
+        if (error) {
+          console.error('Device query error:', error);
+          // Try simpler query without joins
+          const { data: simpleData } = await supabase
+            .from('devices')
+            .select('id, serial_number, model, brand, status, tid, mid, assigned_to')
+            .order('created_at', { ascending: false });
+          setDevices((simpleData || []) as Device[]);
+        } else {
+          setDevices((data || []) as Device[]);
+        }
       }
 
       // Call-related stats
@@ -108,8 +129,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
           .from('calls')
           .select(`
             id, call_number, type, status, priority, client_name, client_address,
-            scheduled_date, assigned_engineer,
-            user_profiles!assigned_engineer(full_name)
+            scheduled_date, assigned_engineer
           `)
           .order('created_at', { ascending: false });
 
@@ -126,8 +146,10 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
         }
 
         const { data, error } = await query;
-        if (error) throw error;
-        setCalls(data as Call[]);
+        if (error) {
+          console.error('Calls query error:', error);
+        }
+        setCalls((data || []) as Call[]);
       }
 
       // Engineers stat
@@ -138,8 +160,10 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
           .eq('role', 'engineer')
           .order('full_name');
 
-        if (error) throw error;
-        setEngineers(data as Engineer[]);
+        if (error) {
+          console.error('Engineers query error:', error);
+        }
+        setEngineers((data || []) as Engineer[]);
       }
     } catch (error) {
       console.error('Error loading stat details:', error);
@@ -151,6 +175,11 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
   const handleNavigate = (path: string) => {
     onClose();
     navigate(path);
+  };
+
+  const getEngineerName = (id: string | undefined | null): string => {
+    if (!id) return '-';
+    return engineerMap.get(id) || '-';
   };
 
   const getStatusColor = (status: string) => {
@@ -257,7 +286,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
                               {device.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{device.user_profiles?.full_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{getEngineerName(device.assigned_to)}</td>
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button
@@ -339,7 +368,7 @@ export function StatDetailModal({ isOpen, onClose, statType, title }: StatDetail
                               {call.status.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{call.user_profiles?.full_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{getEngineerName(call.assigned_engineer)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             {call.scheduled_date ? new Date(call.scheduled_date).toLocaleDateString() : '-'}
                           </td>
