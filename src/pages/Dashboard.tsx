@@ -14,8 +14,10 @@ import {
   Map as MapIcon,
   Shield,
   Settings,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
+import { StatDetailModal, StatType } from '../components/StatDetailModal';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
 import { DeviceDistributionChart } from '../components/charts/DeviceDistributionChart';
 import { PriorityPieChart } from '../components/charts/PriorityPieChart';
@@ -92,6 +94,7 @@ export function Dashboard() {
   const [mapCalls, setMapCalls] = useState<MapCall[]>([]);
   const [mapMerchants, setMapMerchants] = useState<MapMerchant[]>([]);
   const [showMap, setShowMap] = useState(true);
+  const [selectedStat, setSelectedStat] = useState<{ type: StatType; title: string } | null>(null);
 
   // Wait for auth to be ready before loading data
   useEffect(() => {
@@ -342,13 +345,21 @@ export function Dashboard() {
     );
   }
 
-  const statCards = [
+  const statCards: Array<{
+    title: string;
+    value: number;
+    icon: typeof Smartphone;
+    color: string;
+    bgColor: string;
+    statType: StatType;
+  }> = [
     {
       title: 'Total Devices',
       value: stats.totalDevices,
       icon: Smartphone,
       color: 'blue',
       bgColor: 'bg-blue-500',
+      statType: 'totalDevices',
     },
     {
       title: 'Warehouse',
@@ -356,6 +367,7 @@ export function Dashboard() {
       icon: Package,
       color: 'gray',
       bgColor: 'bg-gray-500',
+      statType: 'warehouseDevices',
     },
     {
       title: 'Issued',
@@ -363,6 +375,7 @@ export function Dashboard() {
       icon: TrendingUp,
       color: 'yellow',
       bgColor: 'bg-yellow-500',
+      statType: 'issuedDevices',
     },
     {
       title: 'Installed',
@@ -370,6 +383,7 @@ export function Dashboard() {
       icon: CheckCircle,
       color: 'green',
       bgColor: 'bg-green-500',
+      statType: 'installedDevices',
     },
     {
       title: 'Faulty',
@@ -377,6 +391,7 @@ export function Dashboard() {
       icon: AlertTriangle,
       color: 'red',
       bgColor: 'bg-red-500',
+      statType: 'faultyDevices',
     },
     {
       title: 'Active Calls',
@@ -384,6 +399,7 @@ export function Dashboard() {
       icon: ClipboardList,
       color: 'blue',
       bgColor: 'bg-blue-500',
+      statType: 'activeCalls',
     },
     {
       title: 'Pending',
@@ -391,6 +407,7 @@ export function Dashboard() {
       icon: Clock,
       color: 'orange',
       bgColor: 'bg-orange-500',
+      statType: 'pendingCalls',
     },
     {
       title: 'Completed Today',
@@ -398,6 +415,7 @@ export function Dashboard() {
       icon: CheckCircle,
       color: 'green',
       bgColor: 'bg-green-500',
+      statType: 'completedToday',
     },
   ];
 
@@ -408,6 +426,7 @@ export function Dashboard() {
       icon: Users,
       color: 'purple',
       bgColor: 'bg-purple-500',
+      statType: 'totalEngineers',
     });
   }
 
@@ -537,15 +556,19 @@ export function Dashboard() {
           return (
             <div
               key={stat.title}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition min-h-[110px] flex flex-col justify-between"
+              onClick={() => setSelectedStat({ type: stat.statType, title: stat.title })}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg hover:border-blue-300 hover:scale-[1.02] transition-all duration-200 cursor-pointer min-h-[110px] flex flex-col justify-between group"
             >
               <div className="flex items-start justify-between mb-2">
-                <p className="text-xs md:text-sm font-medium text-gray-600 flex-1 pr-2">{stat.title}</p>
-                <div className={`${stat.bgColor} p-2 rounded-lg flex-shrink-0`}>
+                <p className="text-xs md:text-sm font-medium text-gray-600 flex-1 pr-2 group-hover:text-blue-600 transition-colors">{stat.title}</p>
+                <div className={`${stat.bgColor} p-2 rounded-lg flex-shrink-0 group-hover:scale-110 transition-transform`}>
                   <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900">{stat.value}</p>
+              <div className="flex items-end justify-between">
+                <p className="text-2xl md:text-3xl font-bold text-gray-900">{stat.value}</p>
+                <ExternalLink className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
           );
         })}
@@ -606,21 +629,25 @@ export function Dashboard() {
               <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">Device Status Overview</h2>
               <div className="space-y-4">
                 {[
-                  { label: 'Warehouse', value: stats.warehouseDevices, total: stats.totalDevices, color: 'bg-gray-500' },
-                  { label: 'Issued', value: stats.issuedDevices, total: stats.totalDevices, color: 'bg-yellow-500' },
-                  { label: 'Installed', value: stats.installedDevices, total: stats.totalDevices, color: 'bg-green-500' },
-                  { label: 'Faulty', value: stats.faultyDevices, total: stats.totalDevices, color: 'bg-red-500' },
+                  { label: 'Warehouse', value: stats.warehouseDevices, total: stats.totalDevices, color: 'bg-gray-500', statType: 'warehouseDevices' as StatType },
+                  { label: 'Issued', value: stats.issuedDevices, total: stats.totalDevices, color: 'bg-yellow-500', statType: 'issuedDevices' as StatType },
+                  { label: 'Installed', value: stats.installedDevices, total: stats.totalDevices, color: 'bg-green-500', statType: 'installedDevices' as StatType },
+                  { label: 'Faulty', value: stats.faultyDevices, total: stats.totalDevices, color: 'bg-red-500', statType: 'faultyDevices' as StatType },
                 ].map((item) => {
                   const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
                   return (
-                    <div key={item.label}>
+                    <div 
+                      key={item.label}
+                      onClick={() => setSelectedStat({ type: item.statType, title: `${item.label} Devices` })}
+                      className="cursor-pointer p-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                    >
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{item.label}</span>
+                        <span className="text-gray-600 group-hover:text-blue-600 transition-colors">{item.label}</span>
                         <span className="font-medium text-gray-900">{item.value}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2 group-hover:h-3 transition-all">
                         <div
-                          className={`${item.color} h-2 rounded-full transition-all duration-300`}
+                          className={`${item.color} h-full rounded-full transition-all duration-300`}
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
@@ -634,20 +661,24 @@ export function Dashboard() {
               <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">Call Status Overview</h2>
               <div className="space-y-4">
                 {[
-                  { label: 'Pending', value: stats.pendingCalls, total: stats.activeCalls, color: 'bg-orange-500' },
-                  { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, total: stats.activeCalls, color: 'bg-blue-500' },
-                  { label: 'Completed Today', value: stats.completedToday, total: stats.activeCalls + stats.completedToday, color: 'bg-green-500' },
+                  { label: 'Pending', value: stats.pendingCalls, total: stats.activeCalls, color: 'bg-orange-500', statType: 'pendingCalls' as StatType },
+                  { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, total: stats.activeCalls, color: 'bg-blue-500', statType: 'activeCalls' as StatType },
+                  { label: 'Completed Today', value: stats.completedToday, total: stats.activeCalls + stats.completedToday, color: 'bg-green-500', statType: 'completedToday' as StatType },
                 ].map((item) => {
                   const percentage = item.total > 0 ? (item.value / item.total) * 100 : 0;
                   return (
-                    <div key={item.label}>
+                    <div 
+                      key={item.label}
+                      onClick={() => setSelectedStat({ type: item.statType, title: `${item.label} Calls` })}
+                      className="cursor-pointer p-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                    >
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{item.label}</span>
+                        <span className="text-gray-600 group-hover:text-blue-600 transition-colors">{item.label}</span>
                         <span className="font-medium text-gray-900">{item.value}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2 group-hover:h-3 transition-all">
                         <div
-                          className={`${item.color} h-2 rounded-full transition-all duration-300`}
+                          className={`${item.color} h-full rounded-full transition-all duration-300`}
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
@@ -666,21 +697,36 @@ export function Dashboard() {
           <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">Your Call Status</h2>
           <div className="space-y-4">
             {[
-              { label: 'Pending Calls', value: stats.pendingCalls, color: 'bg-orange-500' },
-              { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, color: 'bg-blue-500' },
-              { label: 'Completed Today', value: stats.completedToday, color: 'bg-green-500' },
+              { label: 'Pending Calls', value: stats.pendingCalls, color: 'bg-orange-500', statType: 'pendingCalls' as StatType },
+              { label: 'In Progress', value: stats.activeCalls - stats.pendingCalls, color: 'bg-blue-500', statType: 'activeCalls' as StatType },
+              { label: 'Completed Today', value: stats.completedToday, color: 'bg-green-500', statType: 'completedToday' as StatType },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between p-4 md:p-5 bg-gray-50 rounded-lg min-h-[68px]">
+              <div 
+                key={item.label} 
+                onClick={() => setSelectedStat({ type: item.statType, title: item.label })}
+                className="flex items-center justify-between p-4 md:p-5 bg-gray-50 rounded-lg min-h-[68px] cursor-pointer hover:bg-gray-100 hover:shadow-md transition-all group"
+              >
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                  <span className="text-gray-700">{item.label}</span>
+                  <span className="text-gray-700 group-hover:text-blue-600 transition-colors">{item.label}</span>
                 </div>
-                <span className="text-xl md:text-2xl font-bold text-gray-900">{item.value}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl md:text-2xl font-bold text-gray-900">{item.value}</span>
+                  <ExternalLink className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Stat Detail Modal */}
+      <StatDetailModal
+        isOpen={selectedStat !== null}
+        onClose={() => setSelectedStat(null)}
+        statType={selectedStat?.type || 'totalDevices'}
+        title={selectedStat?.title || ''}
+      />
     </div>
   );
 }
