@@ -7,8 +7,8 @@ import { IssueDeviceModal } from '../components/IssueDeviceModal';
 import { AddDeviceModal } from '../components/AddDeviceModal';
 
 type Device = Database['public']['Tables']['devices']['Row'] & {
-  banks?: Database['public']['Tables']['banks']['Row'];
-  user_profiles?: Database['public']['Tables']['user_profiles']['Row'];
+  bank_name?: string;
+  assigned_name?: string;
 };
 
 export function Devices() {
@@ -20,6 +20,8 @@ export function Devices() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [engineerMap, setEngineerMap] = useState<Map<string, string>>(new Map());
+  const [bankMap, setBankMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     loadDevices();
@@ -36,17 +38,40 @@ export function Devices() {
 
   const loadDevices = async () => {
     try {
+      // Load lookup data first
+      const [engineersRes, banksRes] = await Promise.all([
+        supabase.from('user_profiles').select('id, full_name').eq('role', 'engineer'),
+        supabase.from('banks').select('id, name')
+      ]);
+
+      const engMap = new Map<string, string>();
+      (engineersRes.data || []).forEach(eng => {
+        engMap.set(eng.id, eng.full_name || 'Unknown');
+      });
+      setEngineerMap(engMap);
+
+      const bnkMap = new Map<string, string>();
+      (banksRes.data || []).forEach(bank => {
+        bnkMap.set(bank.id, bank.name || 'Unknown');
+      });
+      setBankMap(bnkMap);
+
+      // Load devices with simple query (no FK joins to avoid 400 errors)
       const { data, error } = await supabase
         .from('devices')
-        .select(`
-          *,
-          banks!device_bank(id, name, code),
-          user_profiles!assigned_to(id, full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDevices(data as Device[]);
+
+      // Enrich with lookup data
+      const enrichedDevices = (data || []).map(device => ({
+        ...device,
+        bank_name: device.device_bank ? bnkMap.get(device.device_bank) : undefined,
+        assigned_name: device.assigned_to ? engMap.get(device.assigned_to) : undefined,
+      }));
+
+      setDevices(enrichedDevices);
     } catch (error) {
       console.error('Error loading devices:', error);
     } finally {
@@ -257,7 +282,7 @@ export function Devices() {
                       {device.model || '-'}
                     </td>
                     <td className="table-td-responsive whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{device.banks?.name || 'N/A'}</span>
+                      <span className="text-sm text-gray-900">{device.bank_name || 'N/A'}</span>
                     </td>
                     <td className="table-td-responsive whitespace-nowrap">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${statusColors[device.status || 'warehouse']}`}>
@@ -265,7 +290,7 @@ export function Devices() {
                       </span>
                     </td>
                     <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
-                      {device.user_profiles?.full_name || '-'}
+                      {device.assigned_name || '-'}
                     </td>
                     <td className="table-td-responsive whitespace-nowrap text-sm text-gray-600">
                       {device.installed_at_client || '-'}
