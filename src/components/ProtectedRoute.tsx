@@ -4,9 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireSuperAdmin?: boolean;
 }
 
-export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+export function ProtectedRoute({ 
+  children, 
+  requireAdmin = false,
+  requireSuperAdmin = false 
+}: ProtectedRouteProps) {
   const { user, profile, loading, isActive, isPending } = useAuth();
 
   if (loading) {
@@ -33,6 +38,12 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
+  // Super Admin routes - only super_admin role allowed
+  if (requireSuperAdmin && profile?.role !== 'super_admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Admin routes - admin or super_admin allowed
   if (requireAdmin && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
     return <Navigate to="/dashboard" replace />;
   }
