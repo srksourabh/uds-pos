@@ -46,7 +46,13 @@ import { MasterData } from './pages/admin/MasterData';
 import { AdminCallGrid } from './pages/admin/AdminCallGrid';
 import { LiveTracking } from './pages/admin/LiveTracking';
 
-// Mobile Pages
+// FSE (Field Service Engineer) Pages
+import FSECalls from './pages/fse/FSECalls';
+import FSECallAction from './pages/fse/FSECallAction';
+import FSECallDetail from './pages/fse/FSECallDetail';
+import FSEInventory from './pages/fse/FSEInventory';
+
+// Legacy Mobile Pages
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -294,7 +300,41 @@ function App() {
                   }
                 />
 
-                {/* Mobile Routes */}
+                {/* FSE (Field Service Engineer) Routes - Mobile Action Dashboard */}
+                <Route
+                  path="/fse/calls"
+                  element={
+                    <ProtectedRoute>
+                      <FSECalls />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fse/calls/:id"
+                  element={
+                    <ProtectedRoute>
+                      <FSECallDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fse/calls/:id/action"
+                  element={
+                    <ProtectedRoute>
+                      <FSECallAction />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fse/inventory"
+                  element={
+                    <ProtectedRoute>
+                      <FSEInventory />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Legacy Mobile Routes */}
                 <Route
                   path="/mobile/calls"
                   element={
