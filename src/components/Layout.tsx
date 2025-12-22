@@ -22,7 +22,10 @@ import {
   FileText,
   Shield,
   User,
-  Upload
+  Upload,
+  Database,
+  MapPin,
+  Grid3X3
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -51,6 +54,13 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
     { name: 'Bulk Import', href: '/bulk-import', icon: Upload, module: MODULES.REPORTS, adminOnly: true },
     { name: 'Users', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
+  ];
+
+  // Super Admin exclusive navigation items
+  const superAdminNavItems = [
+    { name: 'Master Data', href: '/admin/master-data', icon: Database },
+    { name: 'All Calls', href: '/admin/calls', icon: Grid3X3 },
+    { name: 'Live Tracking', href: '/admin/tracking', icon: MapPin },
   ];
 
   // Filter navigation based on permissions
@@ -110,6 +120,32 @@ export function Layout({ children }: LayoutProps) {
                     </NavLink>
                   );
                 })}
+
+                {/* Super Admin Section Separator */}
+                {isSuperAdmin && (
+                  <>
+                    <div className="flex-shrink-0 w-px h-6 bg-gray-300 mx-2 self-center" />
+                    {superAdminNavItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink
+                          key={item.name}
+                          to={item.href}
+                          className={({ isActive }) =>
+                            `flex-shrink-0 inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${
+                              isActive
+                                ? 'bg-purple-50 text-purple-700'
+                                : 'text-purple-600 hover:bg-purple-50 hover:text-purple-900'
+                            }`
+                          }
+                        >
+                          <Icon className="w-4 h-4 mr-2" />
+                          {item.name}
+                        </NavLink>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
 
@@ -203,6 +239,35 @@ export function Layout({ children }: LayoutProps) {
                     </NavLink>
                   );
                 })}
+
+                {/* Super Admin Mobile Section */}
+                {isSuperAdmin && (
+                  <>
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Super Admin</p>
+                    </div>
+                    {superAdminNavItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={({ isActive }) =>
+                            `flex items-center px-4 py-3 text-base font-medium ${
+                              isActive
+                                ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-700'
+                                : 'text-purple-600 hover:bg-purple-50 hover:text-purple-900'
+                            }`
+                          }
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          {item.name}
+                        </NavLink>
+                      );
+                    })}
+                  </>
+                )}
               </div>
               
               {/* Profile Section */}
