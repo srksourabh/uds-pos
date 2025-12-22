@@ -40,6 +40,13 @@ import { UserManagement } from './pages/UserManagement';
 import { CallManagement } from './pages/CallManagement';
 import { StockManagement } from './pages/StockManagement';
 import { BulkImport } from './pages/BulkImport';
+
+// Super Admin Pages
+import { MasterData } from './pages/admin/MasterData';
+import { AdminCallGrid } from './pages/admin/AdminCallGrid';
+import { LiveTracking } from './pages/admin/LiveTracking';
+
+// Mobile Pages
 import MobileCalls from './pages/mobile/MobileCalls';
 import MobileCallDetail from './pages/mobile/MobileCallDetail';
 import MobileScanDevice from './pages/mobile/MobileScanDevice';
@@ -255,6 +262,39 @@ function App() {
                   }
                 />
 
+                {/* Super Admin Pages - Restricted to super_admin role only */}
+                <Route
+                  path="/admin/master-data"
+                  element={
+                    <ProtectedRoute requireSuperAdmin>
+                      <Layout>
+                        <MasterData />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/calls"
+                  element={
+                    <ProtectedRoute requireSuperAdmin>
+                      <Layout>
+                        <AdminCallGrid />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/tracking"
+                  element={
+                    <ProtectedRoute requireSuperAdmin>
+                      <Layout>
+                        <LiveTracking />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Mobile Routes */}
                 <Route
                   path="/mobile/calls"
                   element={
