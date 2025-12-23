@@ -140,22 +140,26 @@ export function MasterData() {
     setLoading(true);
     try {
       switch (activeTab) {
-        case 'warehouse':
+        case 'warehouse': {
           const { data: wh } = await supabase.from('warehouses').select('*').order('name');
           if (wh) setWarehouses(wh);
           break;
-        case 'employee':
+        }
+        case 'employee': {
           const { data: emp } = await supabase.from('user_profiles').select('*').order('full_name');
           if (emp) setEmployees(emp);
           break;
-        case 'device':
+        }
+        case 'device': {
           const { data: dev } = await supabase.from('devices').select('*').order('created_at', { ascending: false }).limit(500);
           if (dev) setDevices(dev);
           break;
-        case 'pincode':
+        }
+        case 'pincode': {
           const { data: pin } = await supabase.from('pincode_master').select('*').order('pincode');
           if (pin) setPincodes(pin);
           break;
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -422,7 +426,7 @@ export function MasterData() {
       for (const row of csvData) {
         try {
           switch (activeTab) {
-            case 'warehouse':
+            case 'warehouse': {
               await supabase.from('warehouses').insert({
                 name: row.name || row.Name,
                 code: row.code || row.Code || row.ID,
@@ -432,10 +436,11 @@ export function MasterData() {
                 address: row.address || row.Address,
               });
               break;
+            }
             case 'employee':
               // Skip - requires auth user creation
               break;
-            case 'device':
+            case 'device': {
               const deviceId = generateDeviceId();
               const isValid = await validateTripleMatch(
                 row.customer_id || row.Customer,
@@ -455,7 +460,8 @@ export function MasterData() {
                 });
               }
               break;
-            case 'pincode':
+            }
+            case 'pincode': {
               await supabase.from('pincode_master').insert({
                 pincode: row.pincode || row.Pincode || row['Pin Code'],
                 city: row.city || row.City,
@@ -464,6 +470,7 @@ export function MasterData() {
                 sla_hours: parseInt(row.sla_hours || row['SLA Hours'] || '48'),
               });
               break;
+            }
           }
           successCount++;
         } catch (err) {

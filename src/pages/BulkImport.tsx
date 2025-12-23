@@ -249,7 +249,7 @@ export function BulkImport() {
       
       // Type-specific validations
       if (importType === 'devices') {
-        if (mappedRow.serial_number && !/^[A-Za-z0-9\-]+$/.test(mappedRow.serial_number)) {
+        if (mappedRow.serial_number && !/^[A-Za-z0-9-]+$/.test(mappedRow.serial_number)) {
           errors.push({ row: rowNumber, column: 'Serial Number', value: mappedRow.serial_number, error: 'Invalid format' });
           rowValid = false;
         }
