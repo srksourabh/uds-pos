@@ -1,9 +1,13 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from './Modal';
-import type { Database, CallType, Priority } from '../lib/database.types';
+import type { Database, CallType, Priority, ProblemCode } from '../lib/database.types';
+import { ProblemCodeSelect } from './ProblemCodeSelect';
 
 type Bank = Database['public']['Tables']['banks']['Row'];
+
+// Feature flag for SLA tracking
+const ENABLE_SLA_TRACKING = import.meta.env.VITE_ENABLE_SLA_TRACKING !== 'false';
 
 interface CreateCallModalProps {
   isOpen: boolean;
@@ -23,6 +27,8 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
     priority: 'medium',
     scheduled_date: '',
     description: '',
+    problem_code: '' as string | null,
+    sla_hours: '' as string | number,
   });
 
   useEffect(() => {
@@ -46,6 +52,15 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
     }
   };
 
+  const handleProblemCodeChange = (code: string | null, problemCode?: ProblemCode) => {
+    setFormData({
+      ...formData,
+      problem_code: code,
+      // Auto-fill SLA hours from problem code if not already set
+      sla_hours: formData.sla_hours || (problemCode?.default_sla_hours ?? ''),
+    });
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -64,6 +79,8 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
           description: formData.description,
           status: 'pending' as const,
           call_number: `CALL-${Date.now()}`,
+          problem_code: formData.problem_code || null,
+          sla_hours: formData.sla_hours ? Number(formData.sla_hours) : null,
         });
 
       if (error) throw error;
@@ -78,6 +95,8 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
         priority: 'medium',
         scheduled_date: '',
         description: '',
+        problem_code: null,
+        sla_hours: '',
       });
     } catch (error: any) {
       alert(`Error creating call: ${error.message}`);
@@ -186,6 +205,39 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
             </select>
           </div>
         </div>
+
+        {ENABLE_SLA_TRACKING && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Problem Code
+              </label>
+              <ProblemCodeSelect
+                value={formData.problem_code}
+                onChange={handleProblemCodeChange}
+                showDescription
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SLA Hours
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="720"
+                value={formData.sla_hours}
+                onChange={(e) => setFormData({ ...formData, sla_hours: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., 24, 48, 72"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Leave empty for no SLA tracking
+              </p>
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

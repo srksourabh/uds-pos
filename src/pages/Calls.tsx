@@ -5,11 +5,16 @@ import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X } from
 import type { Database } from '../lib/database.types';
 import { CreateCallModal } from '../components/CreateCallModal';
 import { CSVUpload } from '../components/CSVUpload';
+import { SLAIndicator, AgeingIndicator } from '../components/SLAIndicator';
+import { ProblemCodeBadge } from '../components/ProblemCodeSelect';
 
 type Call = Database['public']['Tables']['calls']['Row'] & {
   bank?: Database['public']['Tables']['banks']['Row'];
   engineer?: Database['public']['Tables']['user_profiles']['Row'];
 };
+
+// Feature flag for SLA tracking
+const ENABLE_SLA_TRACKING = import.meta.env.VITE_ENABLE_SLA_TRACKING !== 'false';
 
 export function Calls() {
   const navigate = useNavigate();
@@ -176,6 +181,7 @@ export function Calls() {
                         <span className={`text-xs font-semibold uppercase ${priorityColors[call.priority]}`}>
                           {call.priority}
                         </span>
+                        {call.problem_code && <ProblemCodeBadge code={call.problem_code} />}
                       </div>
                       <h3 className="heading-3-responsive text-gray-900 mb-1">{call.client_name}</h3>
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
@@ -194,6 +200,16 @@ export function Calls() {
                 </div>
 
                 <div className="flex flex-col gap-3 lg:items-end">
+                  {ENABLE_SLA_TRACKING && (call.sla_hours || call.sla_due_date) && (
+                    <div className="text-sm">
+                      <SLAIndicator call={call} showAgeing />
+                    </div>
+                  )}
+                  {ENABLE_SLA_TRACKING && !call.sla_hours && !call.sla_due_date && (
+                    <div className="text-sm">
+                      <AgeingIndicator call={call} />
+                    </div>
+                  )}
                   <div className="text-sm">
                     <p className="text-gray-600">Bank</p>
                     <p className="font-medium text-gray-900">{call.bank?.name || 'N/A'}</p>
