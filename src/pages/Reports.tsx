@@ -590,7 +590,7 @@ export function Reports() {
 
     const { data: devices } = await devicesQuery;
 
-    let movementsQuery = supabase
+    const movementsQuery = supabase
       .from('stock_movements')
       .select('id', { count: 'exact' })
       .gte('created_at', dateRange.startDate)

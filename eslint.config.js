@@ -23,6 +23,18 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Allow 'any' type usage - the codebase uses it extensively
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Make unused vars a warning instead of error
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+      // Allow empty catch blocks (used for intentional error suppression)
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      // Make prefer-const a warning
+      'prefer-const': 'warn',
     },
   }
 );

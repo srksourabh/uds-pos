@@ -154,9 +154,9 @@ Deno.serve(async (req: Request) => {
       .select('id')
       .single();
 
-    let swapCallId = null;
-    if (createSwapCall && device.status === 'installed') {
-    }
+    const swapCallId = null;
+    // TODO: Implement swap call creation when device is installed
+    // if (createSwapCall && device.status === 'installed') { ... }
 
     logStructured('info', 'mark-device-faulty', {
       device_id: deviceId,

@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     }
 
     let updates: any = {};
-    let movementData: any = {
+    const movementData: any = {
       device_id: deviceId,
       movement_type: 'transfer',
       from_status: device.status,
