@@ -54,6 +54,8 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Reports', href: '/reports', icon: FileText, module: MODULES.REPORTS, adminOnly: true },
     { name: 'Bulk Import', href: '/bulk-import', icon: Upload, module: MODULES.REPORTS, adminOnly: true },
     { name: 'Users', href: '/users', icon: Shield, module: MODULES.USER_MANAGEMENT, adminOnly: true },
+    // Phase 2
+    { name: 'Pincodes', href: '/pincode-master', icon: MapPin, module: MODULES.PINCODE_MASTER },
   ];
 
   // Super Admin exclusive navigation items

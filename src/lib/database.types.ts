@@ -9,9 +9,12 @@ export type Json =
 // Role type used across the application
 export type UserRole = 'super_admin' | 'senior_manager' | 'manager' | 'coordinator' | 'stock_coordinator' | 'engineer' | 'admin'
 
+// Pincode service priority
+export type ServicePriority = 'low' | 'normal' | 'high' | 'priority'
+
 // Status types
 export type UserStatus = 'pending_approval' | 'active' | 'suspended' | 'inactive'
-export type DeviceStatus = 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned' | 'in_transit'
+export type DeviceStatus = 'warehouse' | 'issued' | 'installed' | 'faulty' | 'returned' | 'in_transit' | 'field_return'
 export type CallStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 export type CallType = 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
@@ -198,6 +201,16 @@ export type Database = {
           updated_by: string | null
           created_at: string
           updated_at: string
+          // Phase 2: Enhanced Device Tracking Fields (Step 1.2)
+          old_serial_number: string | null
+          old_sim_number: string | null
+          new_sim_number: string | null
+          used_for_tid: string | null
+          used_for_mid: string | null
+          used_for_ticket: string | null
+          receiving_date: string | null
+          used_date: string | null
+          ageing_days: number | null
         }
         Insert: {
           id?: string
@@ -217,6 +230,15 @@ export type Database = {
           updated_by?: string | null
           created_at?: string
           updated_at?: string
+          // Phase 2: Enhanced Device Tracking Fields (Step 1.2)
+          old_serial_number?: string | null
+          old_sim_number?: string | null
+          new_sim_number?: string | null
+          used_for_tid?: string | null
+          used_for_mid?: string | null
+          used_for_ticket?: string | null
+          receiving_date?: string | null
+          used_date?: string | null
         }
         Update: {
           id?: string
@@ -236,6 +258,15 @@ export type Database = {
           updated_by?: string | null
           created_at?: string
           updated_at?: string
+          // Phase 2: Enhanced Device Tracking Fields (Step 1.2)
+          old_serial_number?: string | null
+          old_sim_number?: string | null
+          new_sim_number?: string | null
+          used_for_tid?: string | null
+          used_for_mid?: string | null
+          used_for_ticket?: string | null
+          receiving_date?: string | null
+          used_date?: string | null
         }
         Relationships: [
           {
@@ -946,6 +977,68 @@ export type Database = {
         }
         Relationships: []
       }
+      // Phase 2: Pincode Master
+      pincode_master: {
+        Row: {
+          id: string
+          pin_code: string
+          area_name: string | null
+          city: string
+          district: string | null
+          state: string
+          region: string
+          sla_hours: number
+          primary_coordinator_id: string | null
+          is_serviceable: boolean
+          service_priority: ServicePriority
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          pin_code: string
+          area_name?: string | null
+          city: string
+          district?: string | null
+          state: string
+          region: string
+          sla_hours?: number
+          primary_coordinator_id?: string | null
+          is_serviceable?: boolean
+          service_priority?: ServicePriority
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          pin_code?: string
+          area_name?: string | null
+          city?: string
+          district?: string | null
+          state?: string
+          region?: string
+          sla_hours?: number
+          primary_coordinator_id?: string | null
+          is_serviceable?: boolean
+          service_priority?: ServicePriority
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pincode_master_primary_coordinator_id_fkey"
+            columns: ["primary_coordinator_id"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1103,6 +1196,7 @@ export type Shipment = Tables<'shipments'>
 export type ShipmentDevice = Tables<'shipment_devices'>
 export type Module = Tables<'modules'>
 export type EngineerLocation = Tables<'engineer_locations'>
+export type PincodeMaster = Tables<'pincode_master'>
 
 // Extended types with relationships
 export interface DeviceWithBank extends Device {
@@ -1117,4 +1211,9 @@ export interface CallWithRelations extends Call {
 
 export interface UserProfileWithBank extends UserProfile {
   banks?: Pick<Bank, 'id' | 'name' | 'code'> | null
+}
+
+// Phase 2: Extended Pincode type with coordinator
+export interface PincodeMasterWithCoordinator extends PincodeMaster {
+  coordinator?: Pick<UserProfile, 'id' | 'full_name' | 'phone' | 'email'> | null
 }

@@ -41,6 +41,9 @@ import { CallManagement } from './pages/CallManagement';
 import { StockManagement } from './pages/StockManagement';
 import { BulkImport } from './pages/BulkImport';
 
+// Phase 2: Pincode Master
+import PincodeMaster from './pages/PincodeMaster';
+
 // Super Admin Pages
 import { MasterData } from './pages/admin/MasterData';
 import { AdminCallGrid } from './pages/admin/AdminCallGrid';
@@ -263,6 +266,18 @@ function App() {
                     <ProtectedRoute requireAdmin>
                       <Layout>
                         <BulkImport />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Phase 2: Pincode Master */}
+                <Route
+                  path="/pincode-master"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <PincodeMaster />
                       </Layout>
                     </ProtectedRoute>
                   }

@@ -41,6 +41,8 @@ export const MODULES = {
   ALERTS: 'alerts',
   APPROVALS: 'approvals',
   SETTINGS: 'settings',
+  // Phase 2
+  PINCODE_MASTER: 'pincode_master',
 } as const;
 
 export type ModuleName = typeof MODULES[keyof typeof MODULES];

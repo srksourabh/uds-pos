@@ -95,6 +95,9 @@ export function Devices() {
     installed: 'bg-green-100 text-green-800',
     faulty: 'bg-red-100 text-red-800',
     returned: 'bg-blue-100 text-blue-800',
+    // Phase 2: New statuses (Step 1.2)
+    in_transit: 'bg-purple-100 text-purple-800',
+    field_return: 'bg-orange-100 text-orange-800',
   };
 
   const toggleDeviceSelection = (deviceId: string) => {
