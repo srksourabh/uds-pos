@@ -19,6 +19,9 @@ export type CallStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 
 export type CallType = 'install' | 'swap' | 'deinstall' | 'maintenance' | 'breakdown'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 
+// Problem code categories
+export type ProblemCodeCategory = 'Hardware' | 'Software' | 'Network' | 'Installation' | 'Maintenance'
+
 export type Database = {
   public: {
     Tables: {
@@ -61,6 +64,39 @@ export type Database = {
           address?: string | null
           metadata?: Json
           created_at?: string
+        }
+        Relationships: []
+      }
+      problem_codes: {
+        Row: {
+          id: string
+          code: string
+          description: string
+          category: ProblemCodeCategory
+          is_active: boolean
+          default_sla_hours: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          description: string
+          category: ProblemCodeCategory
+          is_active?: boolean
+          default_sla_hours?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          description?: string
+          category?: ProblemCodeCategory
+          is_active?: boolean
+          default_sla_hours?: number | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -310,6 +346,18 @@ export type Database = {
           metadata: Json
           created_at: string
           updated_at: string
+          // Phase 2: SLA and Problem Code Fields (Step 1.3)
+          old_serial_number: string | null
+          old_sim_number: string | null
+          new_sim_number: string | null
+          visit_count: number
+          problem_code: string | null
+          sla_hours: number | null
+          sla_due_date: string | null
+          system_sync_date: string | null
+          todays_poa_date: string | null
+          action_taken: string | null
+          distance_covered: number
         }
         Insert: {
           id?: string
@@ -337,6 +385,18 @@ export type Database = {
           metadata?: Json
           created_at?: string
           updated_at?: string
+          // Phase 2: SLA and Problem Code Fields (Step 1.3)
+          old_serial_number?: string | null
+          old_sim_number?: string | null
+          new_sim_number?: string | null
+          visit_count?: number
+          problem_code?: string | null
+          sla_hours?: number | null
+          sla_due_date?: string | null
+          system_sync_date?: string | null
+          todays_poa_date?: string | null
+          action_taken?: string | null
+          distance_covered?: number
         }
         Update: {
           id?: string
@@ -364,6 +424,18 @@ export type Database = {
           metadata?: Json
           created_at?: string
           updated_at?: string
+          // Phase 2: SLA and Problem Code Fields (Step 1.3)
+          old_serial_number?: string | null
+          old_sim_number?: string | null
+          new_sim_number?: string | null
+          visit_count?: number
+          problem_code?: string | null
+          sla_hours?: number | null
+          sla_due_date?: string | null
+          system_sync_date?: string | null
+          todays_poa_date?: string | null
+          action_taken?: string | null
+          distance_covered?: number
         }
         Relationships: [
           {
@@ -1197,6 +1269,7 @@ export type ShipmentDevice = Tables<'shipment_devices'>
 export type Module = Tables<'modules'>
 export type EngineerLocation = Tables<'engineer_locations'>
 export type PincodeMaster = Tables<'pincode_master'>
+export type ProblemCode = Tables<'problem_codes'>
 
 // Extended types with relationships
 export interface DeviceWithBank extends Device {
@@ -1216,4 +1289,14 @@ export interface UserProfileWithBank extends UserProfile {
 // Phase 2: Extended Pincode type with coordinator
 export interface PincodeMasterWithCoordinator extends PincodeMaster {
   coordinator?: Pick<UserProfile, 'id' | 'full_name' | 'phone' | 'email'> | null
+}
+
+// Phase 2: Call with SLA computed fields (Step 1.3)
+export interface CallWithSLA extends Call {
+  ageing_days?: number
+  is_overdue?: boolean
+  hours_remaining?: number | null
+  problem_code_details?: ProblemCode | null
+  bank?: Pick<Bank, 'id' | 'name' | 'code'> | null
+  engineer?: Pick<UserProfile, 'id' | 'full_name' | 'phone'> | null
 }
