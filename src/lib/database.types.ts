@@ -100,6 +100,106 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_types: {
+        Row: {
+          id: string
+          name: string
+          description: string
+          is_active: boolean
+          requires_receipt: boolean
+          max_amount: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description: string
+          is_active?: boolean
+          requires_receipt?: boolean
+          max_amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          is_active?: boolean
+          requires_receipt?: boolean
+          max_amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          id: string
+          call_id: string | null
+          engineer_id: string
+          amount: number
+          expense_type: string
+          reason: string
+          receipt_photo_url: string | null
+          status: 'pending' | 'approved' | 'rejected'
+          approved_by: string | null
+          approved_at: string | null
+          rejection_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          call_id?: string | null
+          engineer_id: string
+          amount: number
+          expense_type: string
+          reason: string
+          receipt_photo_url?: string | null
+          status?: 'pending' | 'approved' | 'rejected'
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          call_id?: string | null
+          engineer_id?: string
+          amount?: number
+          expense_type?: string
+          reason?: string
+          receipt_photo_url?: string | null
+          status?: 'pending' | 'approved' | 'rejected'
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_call_id_fkey"
+            columns: ["call_id"]
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_engineer_id_fkey"
+            columns: ["engineer_id"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_approved_by_fkey"
+            columns: ["approved_by"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_profiles: {
         Row: {
           id: string
@@ -1270,6 +1370,8 @@ export type Module = Tables<'modules'>
 export type EngineerLocation = Tables<'engineer_locations'>
 export type PincodeMaster = Tables<'pincode_master'>
 export type ProblemCode = Tables<'problem_codes'>
+export type ExpenseType = Tables<'expense_types'>
+export type Expense = Tables<'expenses'>
 
 // Extended types with relationships
 export interface DeviceWithBank extends Device {
@@ -1299,4 +1401,12 @@ export interface CallWithSLA extends Call {
   problem_code_details?: ProblemCode | null
   bank?: Pick<Bank, 'id' | 'name' | 'code'> | null
   engineer?: Pick<UserProfile, 'id' | 'full_name' | 'phone'> | null
+}
+
+// Phase 2: Expense with details (Step 1.4)
+export interface ExpenseWithDetails extends Expense {
+  engineer?: Pick<UserProfile, 'id' | 'full_name' | 'phone' | 'email'> | null
+  call?: Pick<Call, 'id' | 'call_number' | 'client_name'> | null
+  approver?: Pick<UserProfile, 'id' | 'full_name'> | null
+  expense_type_details?: ExpenseType | null
 }

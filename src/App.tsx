@@ -54,6 +54,10 @@ import FSECalls from './pages/fse/FSECalls';
 import FSECallAction from './pages/fse/FSECallAction';
 import FSECallDetail from './pages/fse/FSECallDetail';
 import FSEInventory from './pages/fse/FSEInventory';
+import FSEExpenses from './pages/fse/FSEExpenses';
+
+// Admin Pages (Phase 2)
+import ExpenseApprovals from './pages/admin/ExpenseApprovals';
 
 // Legacy Mobile Pages
 import MobileCalls from './pages/mobile/MobileCalls';
@@ -345,6 +349,26 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <FSEInventory />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fse/expenses"
+                  element={
+                    <ProtectedRoute>
+                      <FSEExpenses />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Admin Expense Approvals */}
+                <Route
+                  path="/admin/expense-approvals"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Layout>
+                        <ExpenseApprovals />
+                      </Layout>
                     </ProtectedRoute>
                   }
                 />
