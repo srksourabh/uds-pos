@@ -732,3 +732,118 @@ export function useCallsQuery(filters?: CallFilters) {
     staleTime: 30000,
   });
 }
+
+
+// ============================================
+// PHASE 2: EXPENSE TRACKING HOOKS
+// ============================================
+
+type Expense = Database['public']['Tables']['expenses']['Row'];
+type ExpenseType = Database['public']['Tables']['expense_types']['Row'];
+type ProblemCode = Database['public']['Tables']['problem_codes']['Row'];
+
+export function useExpenses(engineerId?: string) {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      try {
+        setLoading(true);
+        let query = supabase.from('expenses').select('*');
+        
+        if (engineerId) {
+          query = query.eq('engineer_id', engineerId);
+        }
+        
+        const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
+        
+        if (supabaseError) throw supabaseError;
+        setExpenses(data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExpenses();
+  }, [engineerId]);
+
+  const submitExpense = async (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([{ ...expense }])
+      .select();
+    
+    if (error) throw error;
+    
+    if (data) {
+      setExpenses([data[0], ...expenses]);
+    }
+    
+    return data?.[0];
+  };
+
+  return { expenses, loading, error, submitExpense };
+}
+
+export function useExpenseTypes() {
+  const [types, setTypes] = useState<ExpenseType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('expense_types')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (error) throw error;
+        setTypes(data || []);
+      } catch (err) {
+        console.error('Error fetching expense types:', err);
+        setTypes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTypes();
+  }, []);
+
+  return { types, loading };
+}
+
+export function useProblemCodes() {
+  const [codes, setCodes] = useState<ProblemCode[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCodes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('problem_codes')
+          .select('*')
+          .eq('is_active', true)
+          .order('category')
+          .order('code');
+        
+        if (error) throw error;
+        setCodes(data || []);
+      } catch (err) {
+        console.error('Error fetching problem codes:', err);
+        setCodes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCodes();
+  }, []);
+
+  return { codes, loading };
+}

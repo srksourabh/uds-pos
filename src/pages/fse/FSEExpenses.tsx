@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useExpenses, useExpenseTypes } from '../../lib/api-hooks';
 import { format } from 'date-fns';
 import type { Expense, ExpenseType } from '../../lib/database.types';
 
@@ -21,66 +22,34 @@ interface ExpenseSummary {
 
 export default function FSEExpenses() {
   const { user } = useAuth();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
+  const { expenses, loading } = useExpenses(user?.id);
+  const { types: expenseTypes } = useExpenseTypes();
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Filter expenses based on status
+  const filteredExpenses = statusFilter === 'all' 
+    ? expenses 
+    : expenses.filter(e => e.status === statusFilter);
+
   useEffect(() => {
-    loadData();
-  }, [user?.id, statusFilter]);
+    // Calculate summary from expenses
+    const summaryCalc: ExpenseSummary = {
+      total_amount: expenses.reduce((sum, e) => sum + e.amount, 0),
+      pending_amount: expenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0),
+      approved_amount: expenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0),
+      rejected_amount: expenses.filter(e => e.status === 'rejected').reduce((sum, e) => sum + e.amount, 0),
+      expense_count: expenses.length,
+    };
+    setSummary(summaryCalc);
+  }, [expenses]);
 
   const loadData = async (showRefreshing = false) => {
-    if (!user?.id) return;
-
     if (showRefreshing) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      // Load expense types
-      const { data: types } = await supabase
-        .from('expense_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      setExpenseTypes(types || []);
-
-      // Load expenses with filter
-      let query = supabase
-        .from('expenses')
-        .select('*')
-        .eq('engineer_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data: expenseData, error } = await query;
-
-      if (error) throw error;
-      setExpenses(expenseData || []);
-
-      // Calculate summary from loaded expenses
-      const allExpenses = expenseData || [];
-      const summaryCalc: ExpenseSummary = {
-        total_amount: allExpenses.reduce((sum, e) => sum + e.amount, 0),
-        pending_amount: allExpenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0),
-        approved_amount: allExpenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0),
-        rejected_amount: allExpenses.filter(e => e.status === 'rejected').reduce((sum, e) => sum + e.amount, 0),
-        expense_count: allExpenses.length,
-      };
-      setSummary(summaryCalc);
-    } catch (error) {
-      console.error('Error loading expenses:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    // Data is now auto-loaded by hooks
+    setRefreshing(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -190,7 +159,7 @@ export default function FSEExpenses() {
 
       {/* Expense List */}
       <div className="px-4 space-y-3">
-        {expenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="bg-white rounded-xl p-8 text-center">
             <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No expenses found</p>
@@ -202,7 +171,7 @@ export default function FSEExpenses() {
             </button>
           </div>
         ) : (
-          expenses.map((expense) => (
+          filteredExpenses.map((expense) => (
             <div key={expense.id} className="bg-white rounded-xl p-4 shadow-sm">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">

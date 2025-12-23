@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useProblemCodes as useProblemCodesHook } from '../lib/api-hooks';
 import type { ProblemCode } from '../lib/database.types';
 
 interface ProblemCodeSelectProps {
@@ -25,33 +26,8 @@ export function ProblemCodeSelect({
   className = '',
   showDescription = false,
 }: ProblemCodeSelectProps) {
-  const [problemCodes, setProblemCodes] = useState<ProblemCode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadProblemCodes();
-  }, []);
-
-  const loadProblemCodes = async () => {
-    try {
-      setLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('problem_codes')
-        .select('*')
-        .eq('is_active', true)
-        .order('category')
-        .order('code');
-
-      if (fetchError) throw fetchError;
-      setProblemCodes(data || []);
-    } catch (err) {
-      console.error('Error loading problem codes:', err);
-      setError('Failed to load problem codes');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { codes: problemCodes, loading } = useProblemCodesHook();
+  const [error] = useState<string | null>(null);
 
   // Group codes by category
   const groupedCodes = problemCodes.reduce<GroupedCodes>((acc, code) => {
@@ -86,12 +62,6 @@ export function ProblemCodeSelect({
     return (
       <div className="text-sm text-red-600">
         {error}
-        <button
-          onClick={loadProblemCodes}
-          className="ml-2 text-blue-600 hover:underline"
-        >
-          Retry
-        </button>
       </div>
     );
   }
@@ -165,35 +135,12 @@ export function ProblemCodeBadge({ code }: { code: string | null }) {
 }
 
 /**
- * useProblemCodes hook for accessing problem codes
+ * useProblemCodesLocal hook for accessing problem codes locally
+ * Note: Prefer useProblemCodes from api-hooks.ts for new code
  */
-export function useProblemCodes() {
-  const [problemCodes, setProblemCodes] = useState<ProblemCode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchCodes = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('problem_codes')
-          .select('*')
-          .eq('is_active', true)
-          .order('category')
-          .order('code');
-
-        if (fetchError) throw fetchError;
-        setProblemCodes(data || []);
-      } catch (err) {
-        console.error('Error loading problem codes:', err);
-        setError('Failed to load problem codes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCodes();
-  }, []);
+export function useProblemCodesLocal() {
+  const { codes: problemCodes, loading } = useProblemCodesHook();
+  const [error] = useState<string | null>(null);
 
   const getByCode = (code: string) => problemCodes.find(pc => pc.code === code);
 
