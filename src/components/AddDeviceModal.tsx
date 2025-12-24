@@ -49,6 +49,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
   useEffect(() => {
     if (isOpen) {
       loadCustomers();
+      // Reset form
       setFormData({
         customer_id: '',
         device_category: '',
@@ -90,6 +91,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
     setLoading(true);
 
     try {
+      // Check for duplicate based on customer + receiving_date + serial_number
       const { data: existing, error: checkError } = await supabase
         .from('devices')
         .select('id')
@@ -139,6 +141,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add New Device">
       <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        {/* Customer Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Customer <span className="text-red-500">*</span>
@@ -158,6 +161,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           </select>
         </div>
 
+        {/* Device Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Device Category <span className="text-red-500">*</span>
@@ -177,6 +181,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           </select>
         </div>
 
+        {/* Make and Model Row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -211,6 +216,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           </div>
         </div>
 
+        {/* Serial Number */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Serial Number <span className="text-red-500">*</span>
@@ -225,6 +231,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           />
         </div>
 
+        {/* TID (Optional) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             TID <span className="text-gray-400">(Optional)</span>
@@ -238,6 +245,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           />
         </div>
 
+        {/* Receiving Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Receiving Date <span className="text-red-500">*</span>
@@ -251,6 +259,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           />
         </div>
 
+        {/* Condition and Whereabouts Row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -283,6 +292,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           </div>
         </div>
 
+        {/* Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
             <strong>Note:</strong> A unique Entry ID will be auto-generated. Duplicate entries 
@@ -290,6 +300,7 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           </p>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <button
             type="button"

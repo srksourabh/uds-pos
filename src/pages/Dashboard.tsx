@@ -15,7 +15,10 @@ import {
   Shield,
   Settings,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  PlayCircle,
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 import { StatDetailModal, StatType } from '../components/StatDetailModal';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
@@ -516,37 +519,94 @@ export function Dashboard() {
 
       {/* Engineer Quick Actions */}
       {isEngineer && (
-        <div className="mb-6 md:mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link
-            to="/calls"
-            className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-5 text-white hover:from-blue-700 hover:to-blue-800 transition group"
-          >
-            <div className="flex items-center gap-4 min-h-[80px]">
-              <div className="bg-white/20 p-3 rounded-lg">
-                <ClipboardList className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">My Calls</h3>
-                <p className="text-blue-100 text-sm">View your assigned service calls</p>
-              </div>
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+        <div className="mb-6 md:mb-8">
+          {/* Primary FSE Actions - Mobile-First Design */}
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link
+                to="/fse/calls"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white hover:from-orange-600 hover:to-orange-700 transition group shadow-lg"
+              >
+                <div className="flex items-center gap-4 min-h-[80px]">
+                  <div className="bg-white/20 p-3 rounded-lg">
+                    <PlayCircle className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">Today's POA</h3>
+                    <p className="text-orange-100 text-sm">Execute your daily service calls</p>
+                  </div>
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+                </div>
+              </Link>
+              <Link
+                to="/fse/inventory"
+                className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl p-5 text-white hover:from-teal-600 hover:to-teal-700 transition group shadow-lg"
+              >
+                <div className="flex items-center gap-4 min-h-[80px]">
+                  <div className="bg-white/20 p-3 rounded-lg">
+                    <RefreshCw className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">Inventory Handshake</h3>
+                    <p className="text-teal-100 text-sm">Accept stock & return devices</p>
+                  </div>
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+                </div>
+              </Link>
             </div>
-          </Link>
-          <Link
-            to="/stock"
-            className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-5 text-white hover:from-green-700 hover:to-green-800 transition group"
-          >
-            <div className="flex items-center gap-4 min-h-[80px]">
-              <div className="bg-white/20 p-3 rounded-lg">
-                <Package className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">My Inventory</h3>
-                <p className="text-green-100 text-sm">Devices assigned to you</p>
-              </div>
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+          </div>
+          
+          {/* Secondary Actions */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">More Options</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Link
+                to="/fse/calls?tab=assigned"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition group"
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition">
+                    <ClipboardList className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">Assigned</span>
+                </div>
+              </Link>
+              <Link
+                to="/fse/calls?tab=completed"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-green-400 hover:shadow-md transition group"
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">Completed</span>
+                </div>
+              </Link>
+              <Link
+                to="/calls"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-purple-400 hover:shadow-md transition group"
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">All Calls</span>
+                </div>
+              </Link>
+              <Link
+                to="/stock"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-amber-400 hover:shadow-md transition group"
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="bg-amber-100 p-2 rounded-lg group-hover:bg-amber-200 transition">
+                    <Package className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">My Stock</span>
+                </div>
+              </Link>
             </div>
-          </Link>
+          </div>
         </div>
       )}
 
