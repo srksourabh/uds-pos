@@ -231,6 +231,9 @@ export type Database = {
           emergency_contact_name: string | null
           emergency_contact_number: string | null
           referred_by: string | null
+          // User Hierarchy: Reporting Manager
+          reports_to: string | null
+          office_id: string | null
         }
         Insert: {
           id: string
@@ -262,6 +265,9 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_number?: string | null
           referred_by?: string | null
+          // User Hierarchy: Reporting Manager
+          reports_to?: string | null
+          office_id?: string | null
         }
         Update: {
           id?: string
@@ -293,12 +299,127 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_number?: string | null
           referred_by?: string | null
+          // User Hierarchy: Reporting Manager
+          reports_to?: string | null
+          office_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "user_profiles_bank_id_fkey"
             columns: ["bank_id"]
             referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profiles_reports_to_fkey"
+            columns: ["reports_to"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profiles_office_id_fkey"
+            columns: ["office_id"]
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // Admin Region Assignments - Many-to-Many relationship
+      admin_region_assignments: {
+        Row: {
+          id: string
+          admin_id: string
+          region_id: string
+          is_primary: boolean
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          region_id: string
+          is_primary?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          region_id?: string
+          is_primary?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_region_assignments_admin_id_fkey"
+            columns: ["admin_id"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_region_assignments_region_id_fkey"
+            columns: ["region_id"]
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_region_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // Admin Office/Warehouse Assignments - Many-to-Many relationship
+      admin_office_assignments: {
+        Row: {
+          id: string
+          admin_id: string
+          office_id: string
+          is_primary: boolean
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          office_id: string
+          is_primary?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          office_id?: string
+          is_primary?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_office_assignments_admin_id_fkey"
+            columns: ["admin_id"]
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_office_assignments_office_id_fkey"
+            columns: ["office_id"]
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_office_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           }
         ]
@@ -1435,6 +1556,46 @@ export type Database = {
           }
         ]
       }
+      // Phase 2: Customers table
+      customers: {
+        Row: {
+          id: string
+          name: string
+          code: string
+          contact_person: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          address: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code: string
+          contact_person?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          address?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string
+          contact_person?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          address?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1559,6 +1720,27 @@ export type Database = {
         }
         Returns: void
       }
+      // Admin access functions
+      get_admin_regions: {
+        Args: {
+          admin_user_id: string
+        }
+        Returns: {
+          region_id: string
+          region_name: string
+          is_primary: boolean
+        }[]
+      }
+      get_admin_warehouses: {
+        Args: {
+          admin_user_id: string
+        }
+        Returns: {
+          warehouse_id: string
+          warehouse_name: string
+          is_primary: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1597,6 +1779,9 @@ export type PincodeMaster = Tables<'pincode_master'>
 export type ProblemCode = Tables<'problem_codes'>
 export type ExpenseType = Tables<'expense_types'>
 export type Expense = Tables<'expenses'>
+export type Customer = Tables<'customers'>
+export type AdminRegionAssignment = Tables<'admin_region_assignments'>
+export type AdminOfficeAssignment = Tables<'admin_office_assignments'>
 
 // Extended types with relationships
 export interface DeviceWithBank extends Device {
@@ -1611,6 +1796,13 @@ export interface CallWithRelations extends Call {
 
 export interface UserProfileWithBank extends UserProfile {
   banks?: Pick<Bank, 'id' | 'name' | 'code'> | null
+}
+
+// User profile with reporting manager and assignments
+export interface UserProfileWithHierarchy extends UserProfile {
+  reporting_manager?: Pick<UserProfile, 'id' | 'full_name' | 'email' | 'role'> | null
+  assigned_regions?: (AdminRegionAssignment & { region?: Region })[]
+  assigned_warehouses?: (AdminOfficeAssignment & { warehouse?: Warehouse })[]
 }
 
 // Phase 2: Extended Pincode type with coordinator
@@ -1654,4 +1846,13 @@ export interface PincodeMasterWithWarehouse extends PincodeMaster {
 // Courier with full details
 export interface CourierWithDetails extends Courier {
   // Future: can add shipments count, etc.
+}
+
+// Admin access context - used for filtering data based on admin's assigned regions/warehouses
+export interface AdminAccessContext {
+  userId: string
+  regionIds: string[]
+  warehouseIds: string[]
+  designation: string | null
+  isRestricted: boolean // true if admin has restricted access
 }
