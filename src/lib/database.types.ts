@@ -220,6 +220,17 @@ export type Database = {
           active: boolean
           created_at: string
           updated_at: string
+          // Phase 2: Enhanced Engineer Fields
+          employee_id: string | null
+          designation: string | null
+          address: string | null
+          pincode: string | null
+          latitude: number | null
+          longitude: number | null
+          date_of_joining: string | null
+          emergency_contact_name: string | null
+          emergency_contact_number: string | null
+          referred_by: string | null
         }
         Insert: {
           id: string
@@ -240,6 +251,17 @@ export type Database = {
           active?: boolean
           created_at?: string
           updated_at?: string
+          // Phase 2: Enhanced Engineer Fields
+          employee_id?: string | null
+          designation?: string | null
+          address?: string | null
+          pincode?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          date_of_joining?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_number?: string | null
+          referred_by?: string | null
         }
         Update: {
           id?: string
@@ -260,6 +282,17 @@ export type Database = {
           active?: boolean
           created_at?: string
           updated_at?: string
+          // Phase 2: Enhanced Engineer Fields
+          employee_id?: string | null
+          designation?: string | null
+          address?: string | null
+          pincode?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          date_of_joining?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_number?: string | null
+          referred_by?: string | null
         }
         Relationships: [
           {
@@ -347,6 +380,13 @@ export type Database = {
           receiving_date: string | null
           used_date: string | null
           ageing_days: number | null
+          // Phase 2: Extended Device Fields
+          customer_id: string | null
+          device_category: string | null
+          condition_status: 'good' | 'faulty' | 'returned' | null
+          whereabouts: 'warehouse' | 'intransit' | 'engineer' | 'installed' | null
+          unique_entry_id: string | null
+          make: string | null
         }
         Insert: {
           id?: string
@@ -375,6 +415,13 @@ export type Database = {
           used_for_ticket?: string | null
           receiving_date?: string | null
           used_date?: string | null
+          // Phase 2: Extended Device Fields
+          customer_id?: string | null
+          device_category?: string | null
+          condition_status?: 'good' | 'faulty' | 'returned' | null
+          whereabouts?: 'warehouse' | 'intransit' | 'engineer' | 'installed' | null
+          unique_entry_id?: string | null
+          make?: string | null
         }
         Update: {
           id?: string
@@ -403,6 +450,13 @@ export type Database = {
           used_for_ticket?: string | null
           receiving_date?: string | null
           used_date?: string | null
+          // Phase 2: Extended Device Fields
+          customer_id?: string | null
+          device_category?: string | null
+          condition_status?: 'good' | 'faulty' | 'returned' | null
+          whereabouts?: 'warehouse' | 'intransit' | 'engineer' | 'installed' | null
+          unique_entry_id?: string | null
+          make?: string | null
         }
         Relationships: [
           {
@@ -458,6 +512,24 @@ export type Database = {
           todays_poa_date: string | null
           action_taken: string | null
           distance_covered: number
+          // Phase 2: Extended Call Fields
+          customer_name: string | null
+          region: string | null
+          tid: string | null
+          mid: string | null
+          call_ticket: string | null
+          existing_device_model: string | null
+          serial_number: string | null
+          sim_number: string | null
+          merchant_name: string | null
+          location: string | null
+          city: string | null
+          state: string | null
+          pincode: string | null
+          contact_person_name: string | null
+          contact_number: string | null
+          alternate_number: string | null
+          request_date: string | null
         }
         Insert: {
           id?: string
@@ -497,6 +569,24 @@ export type Database = {
           todays_poa_date?: string | null
           action_taken?: string | null
           distance_covered?: number
+          // Phase 2: Extended Call Fields
+          customer_name?: string | null
+          region?: string | null
+          tid?: string | null
+          mid?: string | null
+          call_ticket?: string | null
+          existing_device_model?: string | null
+          serial_number?: string | null
+          sim_number?: string | null
+          merchant_name?: string | null
+          location?: string | null
+          city?: string | null
+          state?: string | null
+          pincode?: string | null
+          contact_person_name?: string | null
+          contact_number?: string | null
+          alternate_number?: string | null
+          request_date?: string | null
         }
         Update: {
           id?: string
@@ -536,6 +626,24 @@ export type Database = {
           todays_poa_date?: string | null
           action_taken?: string | null
           distance_covered?: number
+          // Phase 2: Extended Call Fields
+          customer_name?: string | null
+          region?: string | null
+          tid?: string | null
+          mid?: string | null
+          call_ticket?: string | null
+          existing_device_model?: string | null
+          serial_number?: string | null
+          sim_number?: string | null
+          merchant_name?: string | null
+          location?: string | null
+          city?: string | null
+          state?: string | null
+          pincode?: string | null
+          contact_person_name?: string | null
+          contact_number?: string | null
+          alternate_number?: string | null
+          request_date?: string | null
         }
         Relationships: [
           {
@@ -1108,10 +1216,19 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          // Phase 2: Consignment tracking fields
+          consignment_name: string | null
+          consignment_number: string | null
+          consignment_date: string | null
+          customer_id: string | null
         }
         Insert: {
           id?: string
           tracking_number: string
+          consignment_name?: string | null
+          consignment_number?: string | null
+          consignment_date?: string | null
+          customer_id?: string | null
           courier_id?: string | null
           device_ids?: string[]
           source_type?: 'warehouse' | 'engineer' | 'bank'
@@ -1130,6 +1247,10 @@ export type Database = {
         Update: {
           id?: string
           tracking_number?: string
+          consignment_name?: string | null
+          consignment_number?: string | null
+          consignment_date?: string | null
+          customer_id?: string | null
           courier_id?: string | null
           device_ids?: string[]
           source_type?: 'warehouse' | 'engineer' | 'bank'
