@@ -24,6 +24,9 @@ import {
   Mail,
   MapPin,
   User,
+  Globe,
+  Truck,
+  MapPinned,
 } from 'lucide-react';
 import {
   getAllModules,
@@ -94,12 +97,59 @@ interface WarehouseOffice {
   is_active: boolean;
   capacity: number | null;
   current_stock: number | null;
+  region_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Region {
+  id: string;
+  name: string;
+  code: string | null;
+  contact_person_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  manager_name: string | null;
+  manager_phone: string | null;
+  address: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PincodeEntry {
+  id: string;
+  pincode: string;
+  city: string;
+  district: string | null;
+  state: string;
+  region: string;
+  warehouse_id: string | null;
+  primary_coordinator_id: string | null;
+  is_serviceable: boolean;
+  sla_hours: number;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  coordinator_name?: string | null;
+  warehouse_name?: string | null;
+}
+
+interface CourierPartner {
+  id: string;
+  name: string;
+  code: string;
+  contact_person: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  billing_address: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 // Tab types
-type TabType = 'users' | 'customers' | 'warehouses';
+type TabType = 'users' | 'customers' | 'warehouses' | 'regions' | 'pincodes' | 'couriers';
 
 // Role definitions with display names
 const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
@@ -158,6 +208,25 @@ export function UserManagement() {
   const [editingWarehouse, setEditingWarehouse] = useState<WarehouseOffice | null>(null);
   const [warehouseSearchTerm, setWarehouseSearchTerm] = useState('');
 
+  // Regions state
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [showRegionModal, setShowRegionModal] = useState(false);
+  const [editingRegion, setEditingRegion] = useState<Region | null>(null);
+  const [regionSearchTerm, setRegionSearchTerm] = useState('');
+
+  // Pincode state
+  const [pincodes, setPincodes] = useState<PincodeEntry[]>([]);
+  const [showPincodeModal, setShowPincodeModal] = useState(false);
+  const [editingPincode, setEditingPincode] = useState<PincodeEntry | null>(null);
+  const [pincodeSearchTerm, setPincodeSearchTerm] = useState('');
+  const [coordinators, setCoordinators] = useState<{ id: string; full_name: string }[]>([]);
+
+  // Courier state
+  const [couriers, setCouriers] = useState<CourierPartner[]>([]);
+  const [showCourierModal, setShowCourierModal] = useState(false);
+  const [editingCourier, setEditingCourier] = useState<CourierPartner | null>(null);
+  const [courierSearchTerm, setCourierSearchTerm] = useState('');
+
   // Form state
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -199,6 +268,44 @@ export function UserManagement() {
     state: '',
     pincode: '',
     capacity: 1000,
+    region_id: '',
+    is_active: true,
+  });
+
+  // Region form state
+  const [regionForm, setRegionForm] = useState({
+    name: '',
+    code: '',
+    contact_person_name: '',
+    contact_email: '',
+    contact_phone: '',
+    manager_name: '',
+    manager_phone: '',
+    address: '',
+    is_active: true,
+  });
+
+  // Pincode form state
+  const [pincodeForm, setPincodeForm] = useState({
+    pincode: '',
+    city: '',
+    district: '',
+    state: '',
+    region: '',
+    warehouse_id: '',
+    primary_coordinator_id: '',
+    is_serviceable: true,
+    sla_hours: 24,
+  });
+
+  // Courier form state
+  const [courierForm, setCourierForm] = useState({
+    name: '',
+    code: '',
+    contact_person: '',
+    contact_email: '',
+    contact_phone: '',
+    billing_address: '',
     is_active: true,
   });
 
@@ -207,6 +314,10 @@ export function UserManagement() {
     loadModules();
     loadCustomers();
     loadWarehouses();
+    loadRegions();
+    loadPincodes();
+    loadCouriers();
+    loadCoordinators();
   }, []);
 
   // Load functions
@@ -257,6 +368,76 @@ export function UserManagement() {
       setWarehouses(data || []);
     } catch (error) {
       console.error('Error loading warehouses:', error);
+    }
+  };
+
+  const loadRegions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setRegions(data || []);
+    } catch (error) {
+      console.error('Error loading regions:', error);
+    }
+  };
+
+  const loadPincodes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pincode_master')
+        .select(`
+          *,
+          coordinator:primary_coordinator_id(id, full_name),
+          warehouse:warehouse_id(id, name)
+        `)
+        .order('pincode');
+
+      if (error) throw error;
+      
+      // Transform data to include joined fields
+      const transformedData = (data || []).map((p: any) => ({
+        ...p,
+        coordinator_name: p.coordinator?.full_name || null,
+        warehouse_name: p.warehouse?.name || null,
+      }));
+      
+      setPincodes(transformedData);
+    } catch (error) {
+      console.error('Error loading pincodes:', error);
+    }
+  };
+
+  const loadCouriers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('couriers')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCouriers(data || []);
+    } catch (error) {
+      console.error('Error loading couriers:', error);
+    }
+  };
+
+  const loadCoordinators = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('role', ['coordinator', 'stock_coordinator', 'manager', 'senior_manager', 'admin', 'super_admin'])
+        .eq('active', true)
+        .order('full_name');
+
+      if (error) throw error;
+      setCoordinators(data || []);
+    } catch (error) {
+      console.error('Error loading coordinators:', error);
     }
   };
 
@@ -592,6 +773,7 @@ export function UserManagement() {
             state: warehouseForm.state || null,
             pincode: warehouseForm.pincode || null,
             capacity: warehouseForm.capacity,
+            region_id: warehouseForm.region_id || null,
             is_active: warehouseForm.is_active,
             updated_at: new Date().toISOString(),
           })
@@ -613,6 +795,7 @@ export function UserManagement() {
           state: warehouseForm.state || null,
           pincode: warehouseForm.pincode || null,
           capacity: warehouseForm.capacity,
+          region_id: warehouseForm.region_id || null,
           is_active: warehouseForm.is_active,
         });
 
@@ -644,6 +827,310 @@ export function UserManagement() {
     }
   };
 
+  // Region handlers
+  const handleAddRegion = () => {
+    setEditingRegion(null);
+    setRegionForm({
+      name: '',
+      code: '',
+      contact_person_name: '',
+      contact_email: '',
+      contact_phone: '',
+      manager_name: '',
+      manager_phone: '',
+      address: '',
+      is_active: true,
+    });
+    setFormError(null);
+    setShowRegionModal(true);
+  };
+
+  const handleEditRegion = (region: Region) => {
+    setEditingRegion(region);
+    setRegionForm({
+      name: region.name,
+      code: region.code || '',
+      contact_person_name: region.contact_person_name || '',
+      contact_email: region.contact_email || '',
+      contact_phone: region.contact_phone || '',
+      manager_name: region.manager_name || '',
+      manager_phone: region.manager_phone || '',
+      address: region.address || '',
+      is_active: region.is_active,
+    });
+    setFormError(null);
+    setShowRegionModal(true);
+  };
+
+  const handleSaveRegion = async () => {
+    if (!regionForm.name) {
+      setFormError('Region Name is required');
+      return;
+    }
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      if (editingRegion) {
+        const { error } = await supabase
+          .from('regions')
+          .update({
+            name: regionForm.name,
+            code: regionForm.code || null,
+            contact_person_name: regionForm.contact_person_name || null,
+            contact_email: regionForm.contact_email || null,
+            contact_phone: regionForm.contact_phone || null,
+            manager_name: regionForm.manager_name || null,
+            manager_phone: regionForm.manager_phone || null,
+            address: regionForm.address || null,
+            is_active: regionForm.is_active,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingRegion.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('regions').insert({
+          name: regionForm.name,
+          code: regionForm.code || null,
+          contact_person_name: regionForm.contact_person_name || null,
+          contact_email: regionForm.contact_email || null,
+          contact_phone: regionForm.contact_phone || null,
+          manager_name: regionForm.manager_name || null,
+          manager_phone: regionForm.manager_phone || null,
+          address: regionForm.address || null,
+          is_active: regionForm.is_active,
+        });
+
+        if (error) throw error;
+      }
+
+      setShowRegionModal(false);
+      loadRegions();
+    } catch (error: any) {
+      setFormError(error.message || 'Failed to save region');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteRegion = async (region: Region) => {
+    if (!confirm(`Are you sure you want to delete "${region.name}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('regions')
+        .delete()
+        .eq('id', region.id);
+
+      if (error) throw error;
+      loadRegions();
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete region');
+    }
+  };
+
+  // Pincode handlers
+  const handleAddPincode = () => {
+    setEditingPincode(null);
+    setPincodeForm({
+      pincode: '',
+      city: '',
+      district: '',
+      state: '',
+      region: '',
+      warehouse_id: '',
+      primary_coordinator_id: '',
+      is_serviceable: true,
+      sla_hours: 24,
+    });
+    setFormError(null);
+    setShowPincodeModal(true);
+  };
+
+  const handleEditPincode = (pincode: PincodeEntry) => {
+    setEditingPincode(pincode);
+    setPincodeForm({
+      pincode: pincode.pincode,
+      city: pincode.city,
+      district: pincode.district || '',
+      state: pincode.state,
+      region: pincode.region,
+      warehouse_id: pincode.warehouse_id || '',
+      primary_coordinator_id: pincode.primary_coordinator_id || '',
+      is_serviceable: pincode.is_serviceable,
+      sla_hours: pincode.sla_hours,
+    });
+    setFormError(null);
+    setShowPincodeModal(true);
+  };
+
+  const handleSavePincode = async () => {
+    if (!pincodeForm.pincode || !pincodeForm.city || !pincodeForm.state) {
+      setFormError('Pincode, City, and State are required');
+      return;
+    }
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      if (editingPincode) {
+        const { error } = await supabase
+          .from('pincode_master')
+          .update({
+            pincode: pincodeForm.pincode,
+            city: pincodeForm.city,
+            district: pincodeForm.district || null,
+            state: pincodeForm.state,
+            region: pincodeForm.region || pincodeForm.state,
+            warehouse_id: pincodeForm.warehouse_id || null,
+            primary_coordinator_id: pincodeForm.primary_coordinator_id || null,
+            is_serviceable: pincodeForm.is_serviceable,
+            sla_hours: pincodeForm.sla_hours,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingPincode.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('pincode_master').insert({
+          pincode: pincodeForm.pincode,
+          city: pincodeForm.city,
+          district: pincodeForm.district || null,
+          state: pincodeForm.state,
+          region: pincodeForm.region || pincodeForm.state,
+          warehouse_id: pincodeForm.warehouse_id || null,
+          primary_coordinator_id: pincodeForm.primary_coordinator_id || null,
+          is_serviceable: pincodeForm.is_serviceable,
+          sla_hours: pincodeForm.sla_hours,
+        });
+
+        if (error) throw error;
+      }
+
+      setShowPincodeModal(false);
+      loadPincodes();
+    } catch (error: any) {
+      setFormError(error.message || 'Failed to save pincode');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeletePincode = async (pincode: PincodeEntry) => {
+    if (!confirm(`Are you sure you want to delete pincode "${pincode.pincode}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('pincode_master')
+        .delete()
+        .eq('id', pincode.id);
+
+      if (error) throw error;
+      loadPincodes();
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete pincode');
+    }
+  };
+
+  // Courier handlers
+  const handleAddCourier = () => {
+    setEditingCourier(null);
+    setCourierForm({
+      name: '',
+      code: '',
+      contact_person: '',
+      contact_email: '',
+      contact_phone: '',
+      billing_address: '',
+      is_active: true,
+    });
+    setFormError(null);
+    setShowCourierModal(true);
+  };
+
+  const handleEditCourier = (courier: CourierPartner) => {
+    setEditingCourier(courier);
+    setCourierForm({
+      name: courier.name,
+      code: courier.code,
+      contact_person: courier.contact_person || '',
+      contact_email: courier.contact_email || '',
+      contact_phone: courier.contact_phone || '',
+      billing_address: courier.billing_address || '',
+      is_active: courier.is_active,
+    });
+    setFormError(null);
+    setShowCourierModal(true);
+  };
+
+  const handleSaveCourier = async () => {
+    if (!courierForm.name || !courierForm.code) {
+      setFormError('Courier Name and Code are required');
+      return;
+    }
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      if (editingCourier) {
+        const { error } = await supabase
+          .from('couriers')
+          .update({
+            name: courierForm.name,
+            code: courierForm.code,
+            contact_person: courierForm.contact_person || null,
+            contact_email: courierForm.contact_email || null,
+            contact_phone: courierForm.contact_phone || null,
+            billing_address: courierForm.billing_address || null,
+            is_active: courierForm.is_active,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingCourier.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('couriers').insert({
+          name: courierForm.name,
+          code: courierForm.code,
+          contact_person: courierForm.contact_person || null,
+          contact_email: courierForm.contact_email || null,
+          contact_phone: courierForm.contact_phone || null,
+          billing_address: courierForm.billing_address || null,
+          is_active: courierForm.is_active,
+        });
+
+        if (error) throw error;
+      }
+
+      setShowCourierModal(false);
+      loadCouriers();
+    } catch (error: any) {
+      setFormError(error.message || 'Failed to save courier');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteCourier = async (courier: CourierPartner) => {
+    if (!confirm(`Are you sure you want to delete "${courier.name}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('couriers')
+        .delete()
+        .eq('id', courier.id);
+
+      if (error) throw error;
+      loadCouriers();
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete courier');
+    }
+  };
+
   // Filtered data
   const filteredUsers = users.filter(user => {
     const matchesSearch =
@@ -664,6 +1151,28 @@ export function UserManagement() {
     warehouse.name.toLowerCase().includes(warehouseSearchTerm.toLowerCase()) ||
     warehouse.code.toLowerCase().includes(warehouseSearchTerm.toLowerCase()) ||
     warehouse.city?.toLowerCase().includes(warehouseSearchTerm.toLowerCase())
+  );
+
+  const filteredRegions = regions.filter(region =>
+    region.name.toLowerCase().includes(regionSearchTerm.toLowerCase()) ||
+    region.code?.toLowerCase().includes(regionSearchTerm.toLowerCase()) ||
+    region.contact_person_name?.toLowerCase().includes(regionSearchTerm.toLowerCase()) ||
+    region.manager_name?.toLowerCase().includes(regionSearchTerm.toLowerCase())
+  );
+
+  const filteredPincodes = pincodes.filter(pincode =>
+    pincode.pincode.toLowerCase().includes(pincodeSearchTerm.toLowerCase()) ||
+    pincode.city.toLowerCase().includes(pincodeSearchTerm.toLowerCase()) ||
+    pincode.state.toLowerCase().includes(pincodeSearchTerm.toLowerCase()) ||
+    pincode.region.toLowerCase().includes(pincodeSearchTerm.toLowerCase()) ||
+    pincode.district?.toLowerCase().includes(pincodeSearchTerm.toLowerCase())
+  );
+
+  const filteredCouriers = couriers.filter(courier =>
+    courier.name.toLowerCase().includes(courierSearchTerm.toLowerCase()) ||
+    courier.code.toLowerCase().includes(courierSearchTerm.toLowerCase()) ||
+    courier.contact_person?.toLowerCase().includes(courierSearchTerm.toLowerCase()) ||
+    courier.contact_email?.toLowerCase().includes(courierSearchTerm.toLowerCase())
   );
 
   // Role styling
@@ -731,11 +1240,11 @@ export function UserManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="flex space-x-4 min-w-max">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'users'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -746,7 +1255,7 @@ export function UserManagement() {
           </button>
           <button
             onClick={() => setActiveTab('customers')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'customers'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -757,14 +1266,47 @@ export function UserManagement() {
           </button>
           <button
             onClick={() => setActiveTab('warehouses')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'warehouses'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             <Warehouse className="w-5 h-5" />
-            Warehouses/Offices ({warehouses.length})
+            Warehouses ({warehouses.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('regions')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'regions'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Globe className="w-5 h-5" />
+            Regions ({regions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('pincodes')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'pincodes'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <MapPinned className="w-5 h-5" />
+            Pincodes ({pincodes.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('couriers')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'couriers'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Truck className="w-5 h-5" />
+            Couriers ({couriers.length})
           </button>
         </nav>
       </div>
@@ -1187,6 +1729,336 @@ export function UserManagement() {
               <div className="p-12 text-center">
                 <Warehouse className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-600">No warehouses/offices found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Regions Tab */}
+      {activeTab === 'regions' && (
+        <div>
+          {/* Regions Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search regions..."
+                value={regionSearchTerm}
+                onChange={(e) => setRegionSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleAddRegion}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Region
+            </button>
+          </div>
+
+          {/* Regions List */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Person</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouses</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRegions.map((region) => {
+                    const warehouseCount = warehouses.filter(w => w.region_id === region.id).length;
+                    return (
+                      <tr key={region.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                              <Globe className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{region.name}</div>
+                              {region.code && <div className="text-xs text-gray-500">Code: {region.code}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="flex items-center text-gray-900">
+                              <User className="w-4 h-4 text-gray-400 mr-1" />
+                              {region.contact_person_name || '-'}
+                            </div>
+                            {region.contact_email && (
+                              <div className="flex items-center text-gray-500 text-xs">
+                                <Mail className="w-3 h-3 text-gray-400 mr-1" />
+                                {region.contact_email}
+                              </div>
+                            )}
+                            {region.contact_phone && (
+                              <div className="flex items-center text-gray-500 text-xs">
+                                <Phone className="w-3 h-3 text-gray-400 mr-1" />
+                                {region.contact_phone}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="text-gray-900">{region.manager_name || '-'}</div>
+                            {region.manager_phone && (
+                              <div className="text-gray-500 text-xs">{region.manager_phone}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                            {warehouseCount} warehouse{warehouseCount !== 1 ? 's' : ''}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            region.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {region.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleEditRegion(region)}
+                            className="text-blue-600 hover:text-blue-800 mr-3"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRegion(region)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {filteredRegions.length === 0 && (
+              <div className="p-12 text-center">
+                <Globe className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">No regions found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pincodes Tab */}
+      {activeTab === 'pincodes' && (
+        <div>
+          {/* Pincodes Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by pincode, city, state..."
+                value={pincodeSearchTerm}
+                onChange={(e) => setPincodeSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleAddPincode}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Pincode
+            </button>
+          </div>
+
+          {/* Pincodes List */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pincode</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouse</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coordinator</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredPincodes.map((pincode) => (
+                    <tr key={pincode.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                            <MapPinned className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div className="font-medium text-gray-900">{pincode.pincode}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pincode.city}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{pincode.district || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pincode.state}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pincode.region}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pincode.warehouse_name || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pincode.coordinator_name || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          pincode.is_serviceable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {pincode.is_serviceable ? 'Serviceable' : 'Not Serviceable'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => handleEditPincode(pincode)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePincode(pincode)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filteredPincodes.length === 0 && (
+              <div className="p-12 text-center">
+                <MapPinned className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">No pincodes found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Couriers Tab */}
+      {activeTab === 'couriers' && (
+        <div>
+          {/* Couriers Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search couriers..."
+                value={courierSearchTerm}
+                onChange={(e) => setCourierSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleAddCourier}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Courier
+            </button>
+          </div>
+
+          {/* Couriers List */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Courier Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Person</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredCouriers.map((courier) => (
+                    <tr key={courier.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                            <Truck className="w-5 h-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{courier.name}</div>
+                            <div className="text-xs text-gray-500">Code: {courier.code}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <User className="w-4 h-4 text-gray-400 mr-2" />
+                          {courier.contact_person || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                          {courier.contact_email || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                          {courier.contact_phone || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs truncate">
+                          {courier.billing_address || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          courier.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {courier.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => handleEditCourier(courier)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourier(courier)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filteredCouriers.length === 0 && (
+              <div className="p-12 text-center">
+                <Truck className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">No couriers found</p>
               </div>
             )}
           </div>
@@ -1621,6 +2493,421 @@ export function UserManagement() {
                   <Save className="w-5 h-5 mr-2" />
                 )}
                 {editingWarehouse ? 'Save Changes' : 'Add Warehouse'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Region Modal */}
+      {showRegionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingRegion ? 'Edit Region' : 'Add New Region'}
+              </h2>
+              <button
+                onClick={() => setShowRegionModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Region Name *</label>
+                  <input
+                    type="text"
+                    value={regionForm.name}
+                    onChange={(e) => setRegionForm({ ...regionForm, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="East Zone"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                  <input
+                    type="text"
+                    value={regionForm.code}
+                    onChange={(e) => setRegionForm({ ...regionForm, code: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="EAST"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person Name</label>
+                  <input
+                    type="text"
+                    value={regionForm.contact_person_name}
+                    onChange={(e) => setRegionForm({ ...regionForm, contact_person_name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Contact person"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={regionForm.contact_email}
+                    onChange={(e) => setRegionForm({ ...regionForm, contact_email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="contact@email.com"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                <input
+                  type="tel"
+                  value={regionForm.contact_phone}
+                  onChange={(e) => setRegionForm({ ...regionForm, contact_phone: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Manager Name</label>
+                  <input
+                    type="text"
+                    value={regionForm.manager_name}
+                    onChange={(e) => setRegionForm({ ...regionForm, manager_name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Manager name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Manager Phone</label>
+                  <input
+                    type="tel"
+                    value={regionForm.manager_phone}
+                    onChange={(e) => setRegionForm({ ...regionForm, manager_phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                  value={regionForm.address}
+                  onChange={(e) => setRegionForm({ ...regionForm, address: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Regional office address"
+                />
+              </div>
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={regionForm.is_active}
+                    onChange={(e) => setRegionForm({ ...regionForm, is_active: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Active</span>
+                </label>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowRegionModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRegion}
+                disabled={formLoading}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {formLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-5 h-5 mr-2" />
+                )}
+                {editingRegion ? 'Save Changes' : 'Add Region'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pincode Modal */}
+      {showPincodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingPincode ? 'Edit Pincode' : 'Add New Pincode'}
+              </h2>
+              <button
+                onClick={() => setShowPincodeModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+                  <input
+                    type="text"
+                    value={pincodeForm.pincode}
+                    onChange={(e) => setPincodeForm({ ...pincodeForm, pincode: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="700001"
+                    maxLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                  <input
+                    type="text"
+                    value={pincodeForm.city}
+                    onChange={(e) => setPincodeForm({ ...pincodeForm, city: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Kolkata"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
+                  <input
+                    type="text"
+                    value={pincodeForm.district}
+                    onChange={(e) => setPincodeForm({ ...pincodeForm, district: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Kolkata"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                  <input
+                    type="text"
+                    value={pincodeForm.state}
+                    onChange={(e) => setPincodeForm({ ...pincodeForm, state: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="West Bengal"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Region *</label>
+                <input
+                  type="text"
+                  value={pincodeForm.region}
+                  onChange={(e) => setPincodeForm({ ...pincodeForm, region: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="East Zone"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
+                <select
+                  value={pincodeForm.warehouse_id}
+                  onChange={(e) => setPincodeForm({ ...pincodeForm, warehouse_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Select Warehouse</option>
+                  {warehouses.filter(w => w.is_active).map(w => (
+                    <option key={w.id} value={w.id}>{w.name} ({w.code})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Primary Coordinator</label>
+                <select
+                  value={pincodeForm.primary_coordinator_id}
+                  onChange={(e) => setPincodeForm({ ...pincodeForm, primary_coordinator_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Select Coordinator</option>
+                  {coordinators.map(c => (
+                    <option key={c.id} value={c.id}>{c.full_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SLA Hours</label>
+                  <input
+                    type="number"
+                    value={pincodeForm.sla_hours}
+                    onChange={(e) => setPincodeForm({ ...pincodeForm, sla_hours: parseInt(e.target.value) || 24 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    min={1}
+                    max={168}
+                  />
+                </div>
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pincodeForm.is_serviceable}
+                      onChange={(e) => setPincodeForm({ ...pincodeForm, is_serviceable: e.target.checked })}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Serviceable</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowPincodeModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePincode}
+                disabled={formLoading}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {formLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-5 h-5 mr-2" />
+                )}
+                {editingPincode ? 'Save Changes' : 'Add Pincode'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Courier Modal */}
+      {showCourierModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingCourier ? 'Edit Courier' : 'Add New Courier'}
+              </h2>
+              <button
+                onClick={() => setShowCourierModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name *</label>
+                  <input
+                    type="text"
+                    value={courierForm.name}
+                    onChange={(e) => setCourierForm({ ...courierForm, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Blue Dart"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                  <input
+                    type="text"
+                    value={courierForm.code}
+                    onChange={(e) => setCourierForm({ ...courierForm, code: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="BD"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person Name</label>
+                <input
+                  type="text"
+                  value={courierForm.contact_person}
+                  onChange={(e) => setCourierForm({ ...courierForm, contact_person: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Account Manager"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={courierForm.contact_email}
+                    onChange={(e) => setCourierForm({ ...courierForm, contact_email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="support@courier.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={courierForm.contact_phone}
+                    onChange={(e) => setCourierForm({ ...courierForm, contact_phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+                <textarea
+                  value={courierForm.billing_address}
+                  onChange={(e) => setCourierForm({ ...courierForm, billing_address: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Billing address for invoices"
+                />
+              </div>
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={courierForm.is_active}
+                    onChange={(e) => setCourierForm({ ...courierForm, is_active: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Active</span>
+                </label>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowCourierModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCourier}
+                disabled={formLoading}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {formLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-5 h-5 mr-2" />
+                )}
+                {editingCourier ? 'Save Changes' : 'Add Courier'}
               </button>
             </div>
           </div>

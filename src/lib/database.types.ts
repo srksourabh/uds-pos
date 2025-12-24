@@ -941,9 +941,19 @@ export type Database = {
           address: string | null
           contact_person: string | null
           contact_phone: string | null
-          bank_id: string | null
-          active: boolean
+          contact_email: string | null
+          manager_name: string | null
+          manager_phone: string | null
+          office_type: string | null
+          city: string | null
+          state: string | null
+          pincode: string | null
+          capacity: number | null
+          current_stock: number | null
+          region_id: string | null
+          is_active: boolean
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -952,9 +962,19 @@ export type Database = {
           address?: string | null
           contact_person?: string | null
           contact_phone?: string | null
-          bank_id?: string | null
-          active?: boolean
+          contact_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          office_type?: string | null
+          city?: string | null
+          state?: string | null
+          pincode?: string | null
+          capacity?: number | null
+          current_stock?: number | null
+          region_id?: string | null
+          is_active?: boolean
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -963,36 +983,110 @@ export type Database = {
           address?: string | null
           contact_person?: string | null
           contact_phone?: string | null
-          bank_id?: string | null
-          active?: boolean
+          contact_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          office_type?: string | null
+          city?: string | null
+          state?: string | null
+          pincode?: string | null
+          capacity?: number | null
+          current_stock?: number | null
+          region_id?: string | null
+          is_active?: boolean
           created_at?: string
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_region_id_fkey"
+            columns: ["region_id"]
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       couriers: {
         Row: {
           id: string
           name: string
           code: string
+          contact_person: string | null
           contact_phone: string | null
-          active: boolean
+          contact_email: string | null
+          billing_address: string | null
+          is_active: boolean
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           name: string
           code: string
+          contact_person?: string | null
           contact_phone?: string | null
-          active?: boolean
+          contact_email?: string | null
+          billing_address?: string | null
+          is_active?: boolean
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           name?: string
           code?: string
+          contact_person?: string | null
           contact_phone?: string | null
-          active?: boolean
+          contact_email?: string | null
+          billing_address?: string | null
+          is_active?: boolean
           created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      regions: {
+        Row: {
+          id: string
+          name: string
+          code: string | null
+          contact_person_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          manager_name: string | null
+          manager_phone: string | null
+          address: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code?: string | null
+          contact_person_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          address?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string | null
+          contact_person_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          address?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1153,7 +1247,7 @@ export type Database = {
       pincode_master: {
         Row: {
           id: string
-          pin_code: string
+          pincode: string
           area_name: string | null
           city: string
           district: string | null
@@ -1161,6 +1255,7 @@ export type Database = {
           region: string
           sla_hours: number
           primary_coordinator_id: string | null
+          warehouse_id: string | null
           is_serviceable: boolean
           service_priority: ServicePriority
           created_at: string
@@ -1170,7 +1265,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          pin_code: string
+          pincode: string
           area_name?: string | null
           city: string
           district?: string | null
@@ -1178,6 +1273,7 @@ export type Database = {
           region: string
           sla_hours?: number
           primary_coordinator_id?: string | null
+          warehouse_id?: string | null
           is_serviceable?: boolean
           service_priority?: ServicePriority
           created_at?: string
@@ -1187,7 +1283,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          pin_code?: string
+          pincode?: string
           area_name?: string | null
           city?: string
           district?: string | null
@@ -1195,6 +1291,7 @@ export type Database = {
           region?: string
           sla_hours?: number
           primary_coordinator_id?: string | null
+          warehouse_id?: string | null
           is_serviceable?: boolean
           service_priority?: ServicePriority
           created_at?: string
@@ -1207,6 +1304,12 @@ export type Database = {
             foreignKeyName: "pincode_master_primary_coordinator_id_fkey"
             columns: ["primary_coordinator_id"]
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pincode_master_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           }
         ]
@@ -1364,6 +1467,7 @@ export type Notification = Tables<'notifications'>
 export type UserPermission = Tables<'user_permissions'>
 export type Warehouse = Tables<'warehouses'>
 export type Courier = Tables<'couriers'>
+export type Region = Tables<'regions'>
 export type Shipment = Tables<'shipments'>
 export type ShipmentDevice = Tables<'shipment_devices'>
 export type Module = Tables<'modules'>
@@ -1409,4 +1513,24 @@ export interface ExpenseWithDetails extends Expense {
   call?: Pick<Call, 'id' | 'call_number' | 'client_name'> | null
   approver?: Pick<UserProfile, 'id' | 'full_name'> | null
   expense_type_details?: ExpenseType | null
+}
+
+// Phase 2: Region and Warehouse relationship types
+export interface WarehouseWithRegion extends Warehouse {
+  region?: Pick<Region, 'id' | 'name' | 'code'> | null
+}
+
+export interface RegionWithWarehouses extends Region {
+  warehouses?: Warehouse[]
+}
+
+// Phase 2: Pincode with Warehouse relationship
+export interface PincodeMasterWithWarehouse extends PincodeMaster {
+  coordinator?: Pick<UserProfile, 'id' | 'full_name' | 'phone' | 'email'> | null
+  warehouse?: Pick<Warehouse, 'id' | 'name' | 'code'> | null
+}
+
+// Courier with full details
+export interface CourierWithDetails extends Courier {
+  // Future: can add shipments count, etc.
 }
