@@ -18,7 +18,10 @@ import {
   ExternalLink,
   PlayCircle,
   RefreshCw,
-  Calendar
+  Calendar,
+  Receipt,
+  Wrench,
+  BoxIcon
 } from 'lucide-react';
 import { StatDetailModal, StatType } from '../components/StatDetailModal';
 import { CallsTrendChart } from '../components/charts/CallsTrendChart';
@@ -36,6 +39,15 @@ interface DashboardStats {
   pendingCalls: number;
   completedToday: number;
   totalEngineers: number;
+}
+
+// Engineer-specific stats
+interface EngineerStats {
+  myAssignedCalls: number;
+  myTodayPOA: number;
+  myCompletedToday: number;
+  myDevices: number;
+  pendingExpenses: number;
 }
 
 interface MapEngineer {
@@ -98,6 +110,15 @@ export function Dashboard() {
   const [mapMerchants, setMapMerchants] = useState<MapMerchant[]>([]);
   const [showMap, setShowMap] = useState(true);
   const [selectedStat, setSelectedStat] = useState<{ type: StatType; title: string } | null>(null);
+  
+  // Engineer-specific stats
+  const [engineerStats, setEngineerStats] = useState<EngineerStats>({
+    myAssignedCalls: 0,
+    myTodayPOA: 0,
+    myCompletedToday: 0,
+    myDevices: 0,
+    pendingExpenses: 0,
+  });
 
   // Wait for auth to be ready before loading data
   useEffect(() => {
@@ -108,10 +129,16 @@ export function Dashboard() {
 
     // Capture current isAdmin value for this effect run
     const currentIsAdmin = isAdmin;
+    const currentIsEngineer = profile?.role === 'engineer';
 
     loadDashboardStats(currentIsAdmin);
     loadChartData();
     loadMapData();
+    
+    // Load engineer-specific stats if user is an engineer
+    if (currentIsEngineer && profile?.id) {
+      loadEngineerStats(profile.id);
+    }
 
     const devicesChannel = supabase
       .channel('dashboard-devices')
@@ -340,6 +367,58 @@ export function Dashboard() {
     }
   };
 
+  // Load engineer-specific stats
+  const loadEngineerStats = async (engineerId: string) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+
+      // Fetch engineer's calls
+      const { data: myCalls } = await supabase
+        .from('calls')
+        .select('id, status, completed_at, scheduled_date')
+        .eq('assigned_engineer', engineerId);
+
+      // Fetch engineer's devices
+      const { data: myDevices } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('assigned_engineer', engineerId);
+
+      // Fetch pending expense claims
+      const { data: myExpenses } = await supabase
+        .from('expenses')
+        .select('id')
+        .eq('engineer_id', engineerId)
+        .eq('status', 'pending');
+
+      const calls = myCalls || [];
+      
+      // Calculate stats
+      const myAssignedCalls = calls.filter(c => c.status === 'assigned').length;
+      const myTodayPOA = calls.filter(c => 
+        c.status === 'in_progress' || 
+        (c.scheduled_date && new Date(c.scheduled_date).toDateString() === new Date().toDateString())
+      ).length;
+      const myCompletedToday = calls.filter(c =>
+        c.status === 'completed' &&
+        c.completed_at &&
+        new Date(c.completed_at) >= today
+      ).length;
+
+      setEngineerStats({
+        myAssignedCalls,
+        myTodayPOA,
+        myCompletedToday,
+        myDevices: myDevices?.length || 0,
+        pendingExpenses: myExpenses?.length || 0,
+      });
+    } catch (error) {
+      console.error('Error loading engineer stats:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -520,38 +599,118 @@ export function Dashboard() {
       {/* Engineer Quick Actions */}
       {isEngineer && (
         <div className="mb-6 md:mb-8">
+          {/* Engineer Stats Cards */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">My Summary</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Link
+                to="/fse/calls?tab=assigned"
+                className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-400 hover:shadow-md transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <ClipboardList className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">{engineerStats.myAssignedCalls}</span>
+                </div>
+                <p className="text-xs font-medium text-gray-600">Assigned Calls</p>
+              </Link>
+              <Link
+                to="/fse/calls"
+                className="bg-white rounded-xl border border-gray-200 p-4 hover:border-orange-400 hover:shadow-md transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="bg-orange-100 p-2 rounded-lg">
+                    <PlayCircle className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <span className="text-2xl font-bold text-orange-600">{engineerStats.myTodayPOA}</span>
+                </div>
+                <p className="text-xs font-medium text-gray-600">Today's POA</p>
+              </Link>
+              <Link
+                to="/fse/calls?tab=completed"
+                className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-400 hover:shadow-md transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="bg-green-100 p-2 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">{engineerStats.myCompletedToday}</span>
+                </div>
+                <p className="text-xs font-medium text-gray-600">Completed Today</p>
+              </Link>
+              <Link
+                to="/fse/inventory"
+                className="bg-white rounded-xl border border-gray-200 p-4 hover:border-teal-400 hover:shadow-md transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="bg-teal-100 p-2 rounded-lg">
+                    <BoxIcon className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <span className="text-2xl font-bold text-teal-600">{engineerStats.myDevices}</span>
+                </div>
+                <p className="text-xs font-medium text-gray-600">My Devices</p>
+              </Link>
+            </div>
+          </div>
+          
           {/* Primary FSE Actions - Mobile-First Design */}
           <div className="mb-4">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Link
                 to="/fse/calls"
-                className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white hover:from-orange-600 hover:to-orange-700 transition group shadow-lg"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white hover:from-orange-600 hover:to-orange-700 transition group shadow-lg relative"
               >
-                <div className="flex items-center gap-4 min-h-[80px]">
+                {engineerStats.myTodayPOA > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-white text-orange-600 text-xs font-bold px-2 py-1 rounded-full shadow">
+                    {engineerStats.myTodayPOA}
+                  </span>
+                )}
+                <div className="flex items-center gap-4 min-h-[70px]">
                   <div className="bg-white/20 p-3 rounded-lg">
-                    <PlayCircle className="w-8 h-8 text-white" />
+                    <PlayCircle className="w-7 h-7 text-white" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg mb-1">Today's POA</h3>
-                    <p className="text-orange-100 text-sm">Execute your daily service calls</p>
+                    <p className="text-orange-100 text-sm">Execute service calls</p>
                   </div>
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                 </div>
               </Link>
               <Link
                 to="/fse/inventory"
                 className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl p-5 text-white hover:from-teal-600 hover:to-teal-700 transition group shadow-lg"
               >
-                <div className="flex items-center gap-4 min-h-[80px]">
+                <div className="flex items-center gap-4 min-h-[70px]">
                   <div className="bg-white/20 p-3 rounded-lg">
-                    <RefreshCw className="w-8 h-8 text-white" />
+                    <RefreshCw className="w-7 h-7 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">Inventory Handshake</h3>
-                    <p className="text-teal-100 text-sm">Accept stock & return devices</p>
+                    <h3 className="font-semibold text-lg mb-1">Inventory</h3>
+                    <p className="text-teal-100 text-sm">Stock & returns</p>
                   </div>
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
+                </div>
+              </Link>
+              <Link
+                to="/fse/expenses"
+                className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-5 text-white hover:from-purple-600 hover:to-purple-700 transition group shadow-lg relative"
+              >
+                {engineerStats.pendingExpenses > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-white text-purple-600 text-xs font-bold px-2 py-1 rounded-full shadow">
+                    {engineerStats.pendingExpenses}
+                  </span>
+                )}
+                <div className="flex items-center gap-4 min-h-[70px]">
+                  <div className="bg-white/20 p-3 rounded-lg">
+                    <Receipt className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">Expenses</h3>
+                    <p className="text-purple-100 text-sm">Track & claim</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                 </div>
               </Link>
             </div>
@@ -566,8 +725,13 @@ export function Dashboard() {
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition group"
               >
                 <div className="flex flex-col items-center text-center gap-2">
-                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition">
+                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition relative">
                     <ClipboardList className="w-5 h-5 text-blue-600" />
+                    {engineerStats.myAssignedCalls > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+                        {engineerStats.myAssignedCalls}
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm font-medium text-gray-700">Assigned</span>
                 </div>
