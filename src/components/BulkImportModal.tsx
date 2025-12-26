@@ -9,12 +9,6 @@ interface BulkImportModalProps {
   onSuccess: () => void;
 }
 
-interface ValidationError {
-  row: number;
-  error: string;
-  data: any;
-}
-
 export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,23 +17,54 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
   const [showPreview, setShowPreview] = useState(false);
 
   const downloadTemplate = () => {
-    const template = 'serial_number,model,device_bank_code,warranty_expiry,firmware_version,notes\nDEV-001,Ingenico iWL250,FNB,2025-12-31,v1.2.3,Test device\n';
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'device_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const headers = [
+      'serial_number',
+      'model',
+      'make',
+      'device_category',
+      'tid',
+      'customer_id',
+      'receiving_date',
+      'condition_status',
+      'whereabouts'
+    ];
+
+    const examples = [
+      'SN123456789',
+      'iWL250',
+      'Ingenico',
+      'pos_terminal',
+      'TID12345678',
+      'HDFC',
+      '2024-01-15',
+      'good',
+      'warehouse'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      examples.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'devices_import_template.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const parseCSV = (text: string) => {
     const lines = text.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
+    if (lines.length === 0) return [];
 
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     const data = [];
+
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
+      if (!lines[i].trim()) continue;
+      
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
       const row: any = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -63,51 +88,127 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
 
     const text = await selectedFile.text();
     const parsed = parseCSV(text);
-    setPreview(parsed.slice(0, 100));
+    setPreview(parsed.slice(0, 10));
     setShowPreview(true);
+  };
+
+  const generateUniqueEntryId = () => {
+    const date = new Date();
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `UDS${dateStr}${random}`;
   };
 
   const handleImport = async () => {
     if (!file) return;
 
     setLoading(true);
+    setResult(null);
+
     try {
       const text = await file.text();
       const devices = parseCSV(text);
 
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) throw new Error('Not authenticated');
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-import-devices`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ devices, skipDuplicates: true }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Import failed');
+      if (devices.length === 0) {
+        throw new Error('No valid data found in CSV');
       }
 
-      setResult(result);
-      setShowPreview(false);
+      // Load customer/bank lookup
+      const { data: banks } = await supabase
+        .from('banks')
+        .select('id, code, name');
 
-      if (result.success) {
+      const bankMap = new Map<string, string>();
+      (banks || []).forEach(bank => {
+        bankMap.set(bank.code.toUpperCase(), bank.id);
+        bankMap.set(bank.name.toUpperCase(), bank.id);
+      });
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: { row: number; error: string }[] = [];
+
+      for (let i = 0; i < devices.length; i++) {
+        const device = devices[i];
+        try {
+          // Resolve customer_id from code or name
+          let customer_id = device.customer_id;
+          if (customer_id) {
+            const resolved = bankMap.get(customer_id.toUpperCase());
+            if (!resolved) {
+              throw new Error(`Unknown customer: ${customer_id}`);
+            }
+            customer_id = resolved;
+          }
+
+          // Generate unique entry ID
+          const unique_entry_id = generateUniqueEntryId();
+
+          // Prepare device data
+          const deviceData = {
+            unique_entry_id,
+            serial_number: device.serial_number?.toUpperCase() || '',
+            model: device.model || '',
+            make: device.make || '',
+            device_category: device.device_category || 'pos_terminal',
+            tid: device.tid?.toUpperCase() || null,
+            device_bank: customer_id || null,
+            customer_id: customer_id || null,
+            receiving_date: device.receiving_date || new Date().toISOString().split('T')[0],
+            condition_status: device.condition_status || 'good',
+            whereabouts: device.whereabouts || 'warehouse',
+            status: 'warehouse',
+            current_location_type: 'warehouse',
+            current_location_name: 'Main Warehouse',
+          };
+
+          // Check for duplicates
+          const { data: existing } = await supabase
+            .from('devices')
+            .select('id')
+            .eq('serial_number', deviceData.serial_number)
+            .maybeSingle();
+
+          if (existing) {
+            throw new Error(`Duplicate serial number: ${deviceData.serial_number}`);
+          }
+
+          // Insert device
+          const { error: insertError } = await supabase
+            .from('devices')
+            .insert(deviceData);
+
+          if (insertError) throw insertError;
+
+          successCount++;
+        } catch (error: any) {
+          errorCount++;
+          errors.push({
+            row: i + 2, // +2 because row 1 is header, array is 0-indexed
+            error: error.message || 'Unknown error'
+          });
+        }
+      }
+
+      setResult({
+        success: errorCount === 0,
+        successCount,
+        errorCount,
+        errors: errors.slice(0, 20), // Show max 20 errors
+      });
+
+      if (successCount > 0) {
         setTimeout(() => {
           onSuccess();
-          handleClose();
-        }, 3000);
+          if (errorCount === 0) {
+            handleClose();
+          }
+        }, 2000);
       }
     } catch (error: any) {
       setResult({
         success: false,
+        successCount: 0,
         errorCount: 1,
         errors: [{ row: 0, error: error.message }],
       });
@@ -134,9 +235,10 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
               <p className="text-sm font-medium text-blue-900">Import Requirements</p>
               <ul className="mt-2 text-sm text-blue-700 space-y-1 list-disc list-inside">
                 <li>CSV file format required</li>
-                <li>Maximum 1000 devices per import</li>
                 <li>Serial numbers must be unique</li>
-                <li>Bank codes must match existing banks</li>
+                <li>Customer ID can be bank code (HDFC, ICICI, etc.) or bank name</li>
+                <li>Valid whereabouts: warehouse, intransit, engineer, installed</li>
+                <li>Valid conditions: good, faulty, returned</li>
               </ul>
             </div>
           </div>
@@ -184,8 +286,8 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Serial</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Model</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Bank</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Warranty</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Make</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Customer</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -193,8 +295,8 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-3 py-2">{row.serial_number}</td>
                         <td className="px-3 py-2">{row.model}</td>
-                        <td className="px-3 py-2">{row.device_bank_code}</td>
-                        <td className="px-3 py-2">{row.warranty_expiry}</td>
+                        <td className="px-3 py-2">{row.make}</td>
+                        <td className="px-3 py-2">{row.customer_id}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -218,9 +320,6 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
                 </p>
                 <div className="mt-2 text-sm space-y-1">
                   <p className="text-green-700">Imported: {result.successCount} devices</p>
-                  {result.duplicates && result.duplicates.length > 0 && (
-                    <p className="text-yellow-700">Skipped duplicates: {result.duplicates.length}</p>
-                  )}
                   {result.errorCount > 0 && (
                     <p className="text-red-700">Errors: {result.errorCount}</p>
                   )}
@@ -228,7 +327,7 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
                 {result.errors && result.errors.length > 0 && (
                   <div className="mt-3 max-h-40 overflow-y-auto">
                     <p className="text-xs font-medium text-red-900 mb-1">Error Details:</p>
-                    {result.errors.slice(0, 10).map((err: ValidationError, i: number) => (
+                    {result.errors.map((err: { row: number; error: string }, i: number) => (
                       <p key={i} className="text-xs text-red-700">
                         Row {err.row}: {err.error}
                       </p>
@@ -254,7 +353,7 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
           </button>
           <button
             onClick={handleImport}
-            disabled={!file || loading || !!result}
+            disabled={!file || loading || (result && result.success)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
           >
             {loading ? 'Importing...' : 'Import Devices'}
