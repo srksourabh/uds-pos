@@ -601,6 +601,170 @@ function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalProps) {
   );
 }
 
+// Shipment Details Modal
+interface ShipmentDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  shipment: Shipment | null;
+  customerMap: Record<string, Bank>;
+}
+
+function ShipmentDetailsModal({ isOpen, onClose, shipment, customerMap }: ShipmentDetailsModalProps) {
+  if (!isOpen || !shipment) return null;
+
+  const customer = shipment.customer_id ? customerMap[shipment.customer_id] : null;
+
+  return (
+    <div className="modal-backdrop">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Basic Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-medium text-gray-900 mb-3">Shipment Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Consignment Name:</span>
+                <p className="font-medium text-gray-900 mt-1">{shipment.consignment_name || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Consignment Number:</span>
+                <p className="font-medium text-gray-900 mt-1 font-mono">{shipment.consignment_number || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Tracking Number:</span>
+                <p className="font-medium text-gray-900 mt-1 font-mono">{shipment.tracking_number}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Consignment Date:</span>
+                <p className="font-medium text-gray-900 mt-1">
+                  {shipment.consignment_date ? new Date(shipment.consignment_date).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-600">Status:</span>
+                <p className="font-medium text-gray-900 mt-1 capitalize">{shipment.status.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Route:</span>
+                <p className="font-medium text-gray-900 mt-1 capitalize">
+                  {shipment.source_type} → {shipment.destination_type}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer & Courier */}
+          <div className="grid grid-cols-2 gap-4">
+            {customer && (
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Building className="w-4 h-4" />
+                  Customer
+                </h3>
+                <p className="font-medium text-gray-900">{customer.name}</p>
+                <p className="text-sm text-gray-600 font-mono">{customer.code}</p>
+              </div>
+            )}
+            {shipment.courier && (
+              <div className="bg-green-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Courier
+                </h3>
+                <p className="font-medium text-gray-900">{shipment.courier.name}</p>
+                {shipment.courier.code && (
+                  <p className="text-sm text-gray-600 font-mono">{shipment.courier.code}</p>
+                )}
+                {shipment.courier.contact_phone && (
+                  <p className="text-sm text-gray-600">{shipment.courier.contact_phone}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Timeline */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Timeline
+            </h3>
+            <div className="space-y-2 text-sm">
+              {shipment.shipped_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Shipped:</span>
+                  <span className="font-medium text-gray-900">
+                    {new Date(shipment.shipped_at).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {shipment.delivered_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Delivered:</span>
+                  <span className="font-medium text-green-600">
+                    {new Date(shipment.delivered_at).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {shipment.created_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Created:</span>
+                  <span className="font-medium text-gray-900">
+                    {new Date(shipment.created_at).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Devices */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Devices ({shipment.device_ids.length})
+            </h3>
+            <div className="max-h-60 overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {shipment.device_ids.map((deviceId, index) => (
+                  <div
+                    key={index}
+                    className="px-3 py-2 bg-white border border-gray-200 rounded text-sm font-mono text-gray-900"
+                  >
+                    {deviceId}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {shipment.notes && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-2">Notes</h3>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{shipment.notes}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InTransit() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [customers, setCustomers] = useState<Bank[]>([]);
@@ -609,6 +773,8 @@ export function InTransit() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
 
   useEffect(() => {
     loadData();
@@ -663,6 +829,15 @@ export function InTransit() {
 
   const updateShipmentStatus = async (shipmentId: string, newStatus: string) => {
     try {
+      // Get shipment details first
+      const { data: shipment, error: fetchError } = await supabase
+        .from('shipments')
+        .select('*')
+        .eq('id', shipmentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const updates: any = { status: newStatus };
       if (newStatus === 'delivered') {
         updates.delivered_at = new Date().toISOString();
@@ -674,11 +849,36 @@ export function InTransit() {
         .eq('id', shipmentId);
 
       if (error) throw error;
+
+      // Update device statuses when delivered
+      if (newStatus === 'delivered' && shipment.device_ids && shipment.device_ids.length > 0) {
+        const deviceUpdates: any = {
+          whereabouts: shipment.destination_type === 'engineer' ? 'engineer' : 
+                       shipment.destination_type === 'warehouse' ? 'warehouse' : 
+                       'installed',
+          status: shipment.destination_type === 'engineer' ? 'issued' : 
+                  shipment.destination_type === 'warehouse' ? 'warehouse' : 
+                  'installed',
+          current_location_type: shipment.destination_type,
+        };
+
+        // Update devices
+        const { error: deviceError } = await supabase
+          .from('devices')
+          .update(deviceUpdates)
+          .in('serial_number', shipment.device_ids);
+
+        if (deviceError) {
+          console.error('Error updating devices:', deviceError);
+          alert('Shipment marked as delivered, but some devices could not be updated. Please check device statuses manually.');
+        }
+      }
+
       loadShipments();
     } catch (error: any) {
       alert(`Error updating shipment: ${error.message}`);
     }
-  };
+  };;
 
   // Tab counts
   const statusCounts = {
@@ -915,6 +1115,16 @@ export function InTransit() {
                     {shipment.status.replace('_', ' ').toUpperCase()}
                   </span>
 
+                  <button
+                    onClick={() => {
+                      setSelectedShipment(shipment);
+                      setShowDetailsModal(true);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  >
+                    View Details
+                  </button>
+
                   {shipment.status === 'in_transit' && (
                     <button
                       onClick={() => updateShipmentStatus(shipment.id, 'delivered')}
@@ -949,6 +1159,16 @@ export function InTransit() {
         isOpen={showCSVImport}
         onClose={() => setShowCSVImport(false)}
         onSuccess={loadShipments}
+      />
+
+      <ShipmentDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedShipment(null);
+        }}
+        shipment={selectedShipment}
+        customerMap={customerMap}
       />
     </div>
   );

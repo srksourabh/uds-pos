@@ -51,8 +51,13 @@ export function ReceiveStock() {
 
   const handleBarcodeInput = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && currentScan.trim()) {
+      e.preventDefault();
       await processBarcode(currentScan.trim());
       setCurrentScan('');
+      // Refocus the input after processing
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 
@@ -107,7 +112,7 @@ export function ReceiveStock() {
     }
   };
 
-  const handleManualAdd = () => {
+  const handleManualAdd = async () => {
     if (!selectedBank || !manualEntry.serial_number || !manualEntry.model) {
       alert('Please fill in all required fields');
       return;
@@ -116,8 +121,11 @@ export function ReceiveStock() {
     const bank = banks.find(b => b.id === selectedBank);
     if (!bank) return;
 
+    // Capture the serial number before clearing
+    const serialToCheck = manualEntry.serial_number;
+
     const newDevice: ScannedDevice = {
-      serial_number: manualEntry.serial_number,
+      serial_number: serialToCheck,
       model: manualEntry.model,
       source_bank_id: selectedBank,
       source_bank_name: bank.name,
@@ -127,38 +135,37 @@ export function ReceiveStock() {
     setScannedDevices(prev => [newDevice, ...prev]);
     setManualEntry({ serial_number: '', model: '' });
 
-    setTimeout(async () => {
-      try {
-        const { data: existing, error: checkError } = await supabase
-          .from('devices')
-          .select('id')
-          .eq('serial_number', manualEntry.serial_number)
-          .maybeSingle();
+    // Validate the device
+    try {
+      const { data: existing, error: checkError } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('serial_number', serialToCheck)
+        .maybeSingle();
 
-        if (checkError) throw checkError;
+      if (checkError) throw checkError;
 
-        if (existing) {
-          setScannedDevices(prev => prev.map(d =>
-            d.serial_number === manualEntry.serial_number
-              ? { ...d, status: 'error', error_message: 'Device already exists in system' }
-              : d
-          ));
-          return;
-        }
-
+      if (existing) {
         setScannedDevices(prev => prev.map(d =>
-          d.serial_number === manualEntry.serial_number
-            ? { ...d, status: 'success' }
+          d.serial_number === serialToCheck
+            ? { ...d, status: 'error', error_message: 'Device already exists in system' }
             : d
         ));
-      } catch (error: any) {
-        setScannedDevices(prev => prev.map(d =>
-          d.serial_number === manualEntry.serial_number
-            ? { ...d, status: 'error', error_message: error.message }
-            : d
-        ));
+        return;
       }
-    }, 100);
+
+      setScannedDevices(prev => prev.map(d =>
+        d.serial_number === serialToCheck
+          ? { ...d, status: 'success' }
+          : d
+      ));
+    } catch (error: any) {
+      setScannedDevices(prev => prev.map(d =>
+        d.serial_number === serialToCheck
+          ? { ...d, status: 'error', error_message: error.message }
+          : d
+      ));
+    }
   };
 
   const handleReceiveAll = async () => {
@@ -171,17 +178,26 @@ export function ReceiveStock() {
     setLoading(true);
 
     try {
-      const devicesToInsert = successDevices.map(d => ({
-        serial_number: d.serial_number,
-        model: d.model,
-        device_bank: d.source_bank_id,
-        status: 'warehouse' as DeviceStatus,
-        current_location: 'warehouse',
-        metadata: {
-          received_from: d.source_bank_name,
-          received_at: new Date().toISOString(),
-        },
-      }));
+      // Generate unique entry IDs for each device
+      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      
+      const devicesToInsert = successDevices.map((d, index) => {
+        const random6 = Math.floor(100000 + Math.random() * 900000);
+        return {
+          serial_number: d.serial_number,
+          model: d.model,
+          make: 'To be determined',
+          device_category: 'pos_terminal',
+          customer_id: d.source_bank_id,
+          status: 'warehouse' as DeviceStatus,
+          whereabouts: 'warehouse',
+          current_location_type: 'warehouse',
+          current_location_name: 'Main Warehouse',
+          condition_status: 'new',
+          unique_entry_id: `UDS${timestamp}${random6}`,
+          receiving_date: new Date().toISOString().split('T')[0],
+        };
+      });
 
       const { error } = await supabase
         .from('devices')
@@ -191,6 +207,7 @@ export function ReceiveStock() {
 
       alert(`Successfully received ${successDevices.length} devices`);
       setScannedDevices([]);
+      setSelectedBank('');
     } catch (error: any) {
       alert(`Error receiving devices: ${error.message}`);
     } finally {
