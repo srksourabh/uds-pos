@@ -99,43 +99,50 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
     setLoading(true);
 
     try {
+      // Build the call data object
+      const callData: Record<string, any> = {
+        call_number: `CALL-${Date.now()}`,
+        client_bank: formData.client_bank,
+        client_name: formData.merchant_name || formData.customer_name,
+        client_address: formData.client_address,
+        client_phone: formData.contact_number,
+        client_contact: formData.contact_person_name,
+        type: formData.type as CallType,
+        priority: formData.priority as Priority,
+        scheduled_date: formData.scheduled_date || formData.request_date,
+        description: formData.description,
+        status: 'pending' as const,
+        problem_code: formData.problem_code || null,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        // Extended fields
+        customer_name: formData.customer_name || null,
+        region: formData.region || null,
+        tid: formData.tid || null,
+        mid: formData.mid || null,
+        call_ticket: formData.call_ticket || null,
+        existing_device_model: formData.existing_device_model || null,
+        serial_number: formData.serial_number || null,
+        sim_number: formData.sim_number || null,
+        merchant_name: formData.merchant_name || null,
+        location: formData.location || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        pincode: formData.pincode || null,
+        contact_person_name: formData.contact_person_name || null,
+        contact_number: formData.contact_number || null,
+        alternate_number: formData.alternate_number || null,
+        request_date: formData.request_date || null,
+      };
+
+      // Only include sla_hours if it has a value (avoid schema cache issues)
+      if (formData.sla_hours && Number(formData.sla_hours) > 0) {
+        callData.sla_hours = Number(formData.sla_hours);
+      }
+
       const { error } = await supabase
         .from('calls')
-        .insert({
-          call_number: `CALL-${Date.now()}`,
-          client_bank: formData.client_bank,
-          client_name: formData.merchant_name || formData.customer_name,
-          client_address: formData.client_address,
-          client_phone: formData.contact_number,
-          client_contact: formData.contact_person_name,
-          type: formData.type as CallType,
-          priority: formData.priority as Priority,
-          scheduled_date: formData.scheduled_date || formData.request_date,
-          description: formData.description,
-          status: 'pending' as const,
-          problem_code: formData.problem_code || null,
-          sla_hours: formData.sla_hours ? Number(formData.sla_hours) : null,
-          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-          // Extended fields
-          customer_name: formData.customer_name || null,
-          region: formData.region || null,
-          tid: formData.tid || null,
-          mid: formData.mid || null,
-          call_ticket: formData.call_ticket || null,
-          existing_device_model: formData.existing_device_model || null,
-          serial_number: formData.serial_number || null,
-          sim_number: formData.sim_number || null,
-          merchant_name: formData.merchant_name || null,
-          location: formData.location || null,
-          city: formData.city || null,
-          state: formData.state || null,
-          pincode: formData.pincode || null,
-          contact_person_name: formData.contact_person_name || null,
-          contact_number: formData.contact_number || null,
-          alternate_number: formData.alternate_number || null,
-          request_date: formData.request_date || null,
-        });
+        .insert(callData);
 
       if (error) throw error;
 
@@ -586,176 +593,6 @@ export function CreateCallModal({ isOpen, onClose, onSuccess }: CreateCallModalP
         </div>
 
         <div className="flex justify-end gap-3 pt-4 sticky bottom-0 bg-white border-t mt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {loading ? 'Creating...' : 'Create Call'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Select a bank</option>
-            {banks.map((bank) => (
-              <option key={bank.id} value={bank.id}>
-                {bank.name} ({bank.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Client Name *
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.client_name}
-            onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Branch or client name"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Address *
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.client_address}
-            onChange={(e) => setFormData({ ...formData, client_address: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Full address"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone Number *
-          </label>
-          <input
-            type="tel"
-            required
-            value={formData.client_phone}
-            onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="+1234567890"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Call Type *
-            </label>
-            <select
-              required
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="install">Install</option>
-              <option value="swap">Swap</option>
-              <option value="deinstall">De-install</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="breakdown">Breakdown</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Priority *
-            </label>
-            <select
-              required
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-        </div>
-
-        {ENABLE_SLA_TRACKING && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Problem Code
-              </label>
-              <ProblemCodeSelect
-                value={formData.problem_code}
-                onChange={handleProblemCodeChange}
-                showDescription
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SLA Hours
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="720"
-                value={formData.sla_hours}
-                onChange={(e) => setFormData({ ...formData, sla_hours: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., 24, 48, 72"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Leave empty for no SLA tracking
-              </p>
-            </div>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Scheduled Date *
-          </label>
-          <input
-            type="date"
-            required
-            value={formData.scheduled_date}
-            onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            min={new Date().toISOString().split('T')[0]}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description
-          </label>
-          <textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows={3}
-            placeholder="Additional details about the call..."
-          />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"
             onClick={onClose}

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, Plus, ClipboardList, Calendar, MapPin, Upload, X, Download } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 import { CreateCallModal } from '../components/CreateCallModal';
 import { CSVUpload } from '../components/CSVUpload';
+import { AssignCallModal } from '../components/AssignCallModal';
+import { UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { SLAIndicator, AgeingIndicator } from '../components/SLAIndicator';
 import { ProblemCodeBadge } from '../components/ProblemCodeSelect';
 
@@ -24,6 +27,9 @@ export function Calls() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadCalls();
@@ -197,6 +203,41 @@ export function Calls() {
     { id: 'cancelled', label: 'Cancelled', count: tabCounts.cancelled },
   ];
 
+  const handleAssignClick = (call: Call) => {
+    setSelectedCall(call);
+    setShowAssignModal(true);
+  };
+
+  const handleUpdateStatus = async (callId: string, newStatus: 'completed' | 'cancelled') => {
+    if (!window.confirm(`Are you sure you want to mark this call as ${newStatus}?`)) {
+      return;
+    }
+
+    setActionLoading(callId);
+    try {
+      const updateData: Record<string, any> = {
+        status: newStatus,
+      };
+      
+      if (newStatus === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from('calls')
+        .update(updateData)
+        .eq('id', callId);
+
+      if (error) throw error;
+      loadCalls();
+    } catch (error) {
+      console.error('Error updating call status:', error);
+      alert('Failed to update call status');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -352,12 +393,49 @@ export function Calls() {
                     <p className="text-gray-600">Assigned Engineer</p>
                     <p className="font-medium text-gray-900">{call.engineer?.full_name || 'Unassigned'}</p>
                   </div>
-                  <button
-                    onClick={() => navigate(`/calls/${call.id}`)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                  >
-                    View Details
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Assign Engineer button - show for pending/assigned calls */}
+                    {(call.status === 'pending' || call.status === 'assigned') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAssignClick(call); }}
+                        className="px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition flex items-center gap-1"
+                        title="Assign Engineer"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Assign
+                      </button>
+                    )}
+                    {/* Complete button - show for assigned/in_progress calls */}
+                    {(call.status === 'assigned' || call.status === 'in_progress') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleUpdateStatus(call.id, 'completed'); }}
+                        disabled={actionLoading === call.id}
+                        className="px-3 py-1.5 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition flex items-center gap-1 disabled:opacity-50"
+                        title="Mark as Completed"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Complete
+                      </button>
+                    )}
+                    {/* Cancel button - show for pending/assigned/in_progress calls */}
+                    {(call.status === 'pending' || call.status === 'assigned' || call.status === 'in_progress') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleUpdateStatus(call.id, 'cancelled'); }}
+                        disabled={actionLoading === call.id}
+                        className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition flex items-center gap-1 disabled:opacity-50"
+                        title="Cancel Call"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      onClick={() => navigate(`/calls/${call.id}`)}
+                      className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -406,165 +484,24 @@ export function Calls() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Call
-          </button>
-        </div>
-      </div>
 
-      <div className="card-responsive mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by call number, client name, or address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="text-gray-400 w-5 h-5" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="assigned">Assigned</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        {filteredCalls.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">No calls found</p>
-          </div>
-        ) : (
-          filteredCalls.map((call) => (
-            <div
-              key={call.id}
-              className="card-responsive hover:shadow-md transition"
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start gap-3 mb-3">
-                    <ClipboardList className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-gray-900">{call.call_number}</span>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${typeColors[call.type]}`}>
-                          {call.type}
-                        </span>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusColors[call.status]}`}>
-                          {call.status.replace('_', ' ')}
-                        </span>
-                        <span className={`text-xs font-semibold uppercase ${priorityColors[call.priority]}`}>
-                          {call.priority}
-                        </span>
-                        {call.problem_code && <ProblemCodeBadge code={call.problem_code} />}
-                      </div>
-                      <h3 className="heading-3-responsive text-gray-900 mb-1">{call.client_name}</h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{call.client_address}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>Scheduled: {new Date(call.scheduled_date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {call.description && (
-                    <p className="text-sm text-gray-600 mt-2 pl-8">{call.description}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3 lg:items-end">
-                  {ENABLE_SLA_TRACKING && (call.sla_hours || call.sla_due_date) && (
-                    <div className="text-sm">
-                      <SLAIndicator call={call} showAgeing />
-                    </div>
-                  )}
-                  {ENABLE_SLA_TRACKING && !call.sla_hours && !call.sla_due_date && (
-                    <div className="text-sm">
-                      <AgeingIndicator call={call} />
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <p className="text-gray-600">Bank</p>
-                    <p className="font-medium text-gray-900">{call.bank?.name || 'N/A'}</p>
-                  </div>
-                  <div className="text-sm">
-                    <p className="text-gray-600">Assigned Engineer</p>
-                    <p className="font-medium text-gray-900">{call.engineer?.full_name || 'Unassigned'}</p>
-                  </div>
-                  <button
-                    onClick={() => navigate(`/calls/${call.id}`)}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {filteredCalls.length} of {calls.length} calls
-        </p>
-      </div>
-
-      <CreateCallModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          loadCalls();
-          setShowCreateModal(false);
-        }}
-      />
-
-      {/* CSV Upload Modal */}
-      {showCSVUpload && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Import Calls from CSV</h2>
-              <button
-                onClick={() => setShowCSVUpload(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
-              <CSVUpload
-                onComplete={(results) => {
-                  const successCount = results.filter(r => r.success).length;
-                  if (successCount > 0) {
-                    loadCalls();
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
+      {/* Assign Call Modal */}
+      {selectedCall && (
+        <AssignCallModal
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedCall(null);
+          }}
+          onSuccess={() => {
+            loadCalls();
+            setShowAssignModal(false);
+            setSelectedCall(null);
+          }}
+          callId={selectedCall.id}
+          callNumber={selectedCall.call_number}
+          currentEngineerId={selectedCall.assigned_engineer}
+        />
       )}
     </div>
   );

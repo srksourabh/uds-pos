@@ -8,17 +8,27 @@ interface CSVRow {
   call_number?: string;
   type?: string;
   priority?: string;
-  client_name?: string;
-  client_contact?: string;
-  client_phone?: string;
+  customer_name?: string;
+  region?: string;
+  request_date?: string;
+  tid?: string;
+  mid?: string;
+  call_ticket?: string;
+  existing_device_model?: string;
+  serial_number?: string;
+  sim_number?: string;
+  merchant_name?: string;
+  location?: string;
+  city?: string;
+  state?: string;
   client_address?: string;
+  pincode?: string;
+  contact_person_name?: string;
+  contact_number?: string;
+  alternate_number?: string;
   latitude?: string;
   longitude?: string;
-  scheduled_date?: string;
-  scheduled_time_window?: string;
   description?: string;
-  client_bank?: string;
-  requires_photo?: string;
 }
 
 interface UploadResult {
@@ -33,7 +43,7 @@ interface CSVUploadProps {
   bankId?: string;
 }
 
-const REQUIRED_COLUMNS = ['call_number', 'type', 'client_name', 'client_address'];
+const REQUIRED_COLUMNS = ['call_number', 'type', 'customer_name', 'merchant_name', 'city', 'state', 'client_address', 'contact_person_name', 'contact_number'];
 const VALID_TYPES = ['install', 'swap', 'deinstall', 'maintenance', 'breakdown'];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
@@ -46,6 +56,14 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
   const [results, setResults] = useState<UploadResult[]>([]);
   const [step, setStep] = useState<'upload' | 'preview' | 'results'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [banks, setBanks] = useState<{ id: string; name: string; code: string }[]>([]);
+
+  // Load banks on mount
+  useEffect(() => {
+    supabase.from('banks').select('id, name, code').then(({ data }) => {
+      setBanks(data || []);
+    });
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -100,6 +118,26 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
             errors.push(`Row ${rowNum}: Missing call_number`);
           }
 
+          if (!row.customer_name?.trim()) {
+            errors.push(`Row ${rowNum}: Missing customer_name (use bank name like HDFC, ICICI)`);
+          }
+
+          if (!row.merchant_name?.trim()) {
+            errors.push(`Row ${rowNum}: Missing merchant_name`);
+          }
+
+          if (!row.client_address?.trim()) {
+            errors.push(`Row ${rowNum}: Missing client_address`);
+          }
+
+          if (!row.contact_person_name?.trim()) {
+            errors.push(`Row ${rowNum}: Missing contact_person_name`);
+          }
+
+          if (!row.contact_number?.trim()) {
+            errors.push(`Row ${rowNum}: Missing contact_number`);
+          }
+
           if (row.type && !VALID_TYPES.includes(row.type.toLowerCase())) {
             errors.push(`Row ${rowNum}: Invalid type "${row.type}". Must be one of: ${VALID_TYPES.join(', ')}`);
           }
@@ -135,24 +173,34 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
       const row = parsedData[i];
       try {
         // Validate required fields
-        if (!row.call_number?.trim() || !row.client_name?.trim() || !row.client_address?.trim()) {
+        if (!row.call_number?.trim() || !row.merchant_name?.trim() || !row.client_address?.trim()) {
           uploadResults.push({
             success: false,
             row: i + 2,
             call_number: row.call_number || 'N/A',
-            error: 'Missing required fields: call_number, client_name, or client_address',
+            error: 'Missing required fields: call_number, merchant_name, or client_address',
           });
           continue;
         }
 
-        // Ensure client_bank has a value (required field)
-        const bankValue = row.client_bank || bankId;
-        if (!bankValue) {
+        // Lookup bank by customer_name (bank name or code)
+        let resolvedBankId = bankId || null;
+        if (row.customer_name) {
+          const foundBank = banks.find(b => 
+            b.name.toLowerCase() === row.customer_name!.toLowerCase() ||
+            b.code.toLowerCase() === row.customer_name!.toLowerCase()
+          );
+          if (foundBank) {
+            resolvedBankId = foundBank.id;
+          }
+        }
+
+        if (!resolvedBankId) {
           uploadResults.push({
             success: false,
             row: i + 2,
             call_number: row.call_number || 'N/A',
-            error: 'Missing required field: client_bank',
+            error: `Bank not found: "${row.customer_name}". Use bank name like HDFC, ICICI, Axis, SBI, or Kotak`,
           });
           continue;
         }
@@ -162,17 +210,32 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
           type: (row.type?.toLowerCase() || 'maintenance') as CallType,
           priority: (row.priority?.toLowerCase() || 'medium') as Priority,
           status: 'pending' as const,
-          client_name: row.client_name.trim(),
-          client_contact: row.client_contact?.trim() || null,
-          client_phone: row.client_phone?.trim() || null,
-          client_address: row.client_address.trim(),
+          client_bank: resolvedBankId,
+          customer_name: row.customer_name?.trim() || null,
+          region: row.region?.trim() || null,
+          request_date: row.request_date || null,
+          tid: row.tid?.trim() || null,
+          mid: row.mid?.trim() || null,
+          call_ticket: row.call_ticket?.trim() || null,
+          existing_device_model: row.existing_device_model?.trim() || null,
+          serial_number: row.serial_number?.trim() || null,
+          sim_number: row.sim_number?.trim() || null,
+          merchant_name: row.merchant_name?.trim() || null,
+          client_name: row.merchant_name?.trim() || row.customer_name?.trim() || '',
+          location: row.location?.trim() || null,
+          city: row.city?.trim() || null,
+          state: row.state?.trim() || null,
+          client_address: row.client_address?.trim() || '',
+          pincode: row.pincode?.trim() || null,
+          contact_person_name: row.contact_person_name?.trim() || null,
+          client_contact: row.contact_person_name?.trim() || null,
+          contact_number: row.contact_number?.trim() || null,
+          client_phone: row.contact_number?.trim() || null,
+          alternate_number: row.alternate_number?.trim() || null,
           latitude: row.latitude ? parseFloat(row.latitude) : null,
           longitude: row.longitude ? parseFloat(row.longitude) : null,
-          scheduled_date: row.scheduled_date || null,
-          scheduled_time_window: row.scheduled_time_window || null,
-          description: row.description?.trim() || undefined,
-          client_bank: bankValue,
-          requires_photo: row.requires_photo?.toLowerCase() === 'true' || row.requires_photo === '1',
+          description: row.description?.trim() || null,
+          scheduled_date: row.request_date || null,
         };
 
         const { error } = await supabase
@@ -210,9 +273,9 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
   };
 
   const downloadTemplate = () => {
-    const template = `call_number,type,priority,client_name,client_contact,client_phone,client_address,latitude,longitude,scheduled_date,scheduled_time_window,description,client_bank,requires_photo
-CALL-001,install,high,ABC Corp,John Doe,+91-9876543210,123 Main St Mumbai,19.076,72.8777,2024-01-15,09:00-12:00,New POS installation,bank-uuid-here,true
-CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi,28.6139,77.209,2024-01-16,14:00-17:00,Routine maintenance,bank-uuid-here,false`;
+    const template = `call_number,type,priority,customer_name,region,request_date,tid,mid,call_ticket,existing_device_model,serial_number,sim_number,merchant_name,location,city,state,client_address,pincode,contact_person_name,contact_number,alternate_number,latitude,longitude,description
+CALL-001,install,high,HDFC,East,2024-01-15,TID001,MID001234567890,TICKET-001,Ingenico Move5000,SN123456,9876543210,ABC Store,Main Road,Kolkata,West Bengal,123 Main Street Kolkata,700001,John Doe,9876543210,9876543211,22.5726,88.3639,New POS installation required
+CALL-002,maintenance,medium,ICICI,West,2024-01-16,TID002,MID987654321098,TICKET-002,VeriFone P400,SN654321,9876543220,XYZ Mart,Park Street,Mumbai,Maharashtra,456 Park Avenue Mumbai,400001,Jane Smith,9876543220,,19.076,72.8777,Routine maintenance check`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -326,9 +389,9 @@ CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Call #</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Type</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Priority</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Client</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Address</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Customer</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Merchant</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">City</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -336,9 +399,9 @@ CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi
                   <tr key={i} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-sm">{row.call_number}</td>
                     <td className="px-3 py-2 text-sm capitalize">{row.type}</td>
-                    <td className="px-3 py-2 text-sm capitalize">{row.priority}</td>
-                    <td className="px-3 py-2 text-sm">{row.client_name}</td>
-                    <td className="px-3 py-2 text-sm truncate max-w-[200px]">{row.client_address}</td>
+                    <td className="px-3 py-2 text-sm">{row.customer_name}</td>
+                    <td className="px-3 py-2 text-sm">{row.merchant_name}</td>
+                    <td className="px-3 py-2 text-sm">{row.city}, {row.state}</td>
                   </tr>
                 ))}
               </tbody>
@@ -421,8 +484,11 @@ CALL-002,maintenance,medium,XYZ Ltd,Jane Smith,+91-9876543211,456 Park Ave Delhi
         <p className="text-xs">{REQUIRED_COLUMNS.join(', ')}</p>
         <p className="font-medium mt-2 mb-1">Optional columns:</p>
         <p className="text-xs">
-          priority, client_contact, client_phone, latitude, longitude,
-          scheduled_date, scheduled_time_window, description, client_bank, requires_photo
+          priority, region, request_date, tid, mid, call_ticket, existing_device_model, 
+          serial_number, sim_number, location, pincode, alternate_number, latitude, longitude, description
+        </p>
+        <p className="mt-2 text-xs text-blue-600">
+          <strong>Note:</strong> Use bank name (HDFC, ICICI, Axis, SBI, Kotak) in customer_name column - UUIDs are not required!
         </p>
       </div>
     </div>
