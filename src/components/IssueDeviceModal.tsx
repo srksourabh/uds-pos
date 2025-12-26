@@ -24,20 +24,18 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
   useEffect(() => {
     if (isOpen) {
       loadEngineers();
+      setSelectedEngineer('');
+      setNotes('');
+      setResult(null);
     }
-  }, [isOpen, selectedDevices]);
+  }, [isOpen]);
 
   const loadEngineers = async () => {
-    if (selectedDevices.length === 0) return;
-
-    const bankIds = [...new Set(selectedDevices.map(d => d.device_bank))];
-
     const { data } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('role', 'engineer')
       .eq('status', 'active')
-      .in('bank_id', bankIds)
       .order('full_name');
 
     setEngineers(data || []);
@@ -50,42 +48,80 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
     setResult(null);
 
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) throw new Error('Not authenticated');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/issue-device-to-engineer`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            deviceIds: selectedDevices.map(d => d.id),
-            engineerId: selectedEngineer,
-            notes: notes,
-          }),
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const device of selectedDevices) {
+        try {
+          // Update device assignment
+          const { error: updateError } = await supabase
+            .from('devices')
+            .update({
+              assigned_to: selectedEngineer,
+              whereabouts: 'engineer',
+              status: 'issued',
+              current_location_type: 'engineer',
+              current_location_id: selectedEngineer,
+              updated_at: new Date().toISOString(),
+              updated_by: user.id,
+            })
+            .eq('id', device.id);
+
+          if (updateError) throw updateError;
+
+          // Create stock movement record
+          const { error: movementError } = await supabase
+            .from('stock_movements')
+            .insert({
+              device_id: device.id,
+              movement_type: 'issuance',
+              from_status: device.status || 'warehouse',
+              to_status: 'issued',
+              to_engineer: selectedEngineer,
+              from_location_type: 'warehouse',
+              from_location_name: 'Main Warehouse',
+              to_location_type: 'engineer',
+              to_location_id: selectedEngineer,
+              actor_id: user.id,
+              reason: 'Device issued to engineer',
+              notes: notes || '',
+            });
+
+          if (movementError) {
+            console.warn('Movement record creation failed:', movementError);
+            // Don't fail the whole operation if movement record fails
+          }
+
+          successCount++;
+        } catch (error: any) {
+          errorCount++;
+          errors.push(`${device.serial_number}: ${error.message}`);
         }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to issue devices');
       }
 
-      setResult(result);
+      setResult({
+        success: errorCount === 0,
+        successCount,
+        errorCount,
+        errors: errors.slice(0, 10),
+      });
 
-      if (result.success) {
+      if (successCount > 0) {
         setTimeout(() => {
           onSuccess();
-          handleClose();
+          if (errorCount === 0) {
+            handleClose();
+          }
         }, 2000);
       }
     } catch (error: any) {
       setResult({
         success: false,
+        successCount: 0,
         errorCount: 1,
         errors: [error.message],
       });
@@ -100,14 +136,6 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
     setResult(null);
     onClose();
   };
-
-  const selectedEngineerData = engineers.find(e => e.id === selectedEngineer);
-  const devicesByBank = selectedDevices.reduce((acc, device) => {
-    const bankId = device.device_bank;
-    if (!acc[bankId]) acc[bankId] = [];
-    acc[bankId].push(device);
-    return acc;
-  }, {} as Record<string, Device[]>);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Issue Devices to Engineer" maxWidth="lg">
@@ -135,8 +163,7 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
                 <p className="text-sm text-yellow-700">
-                  No active engineers found for the selected devices' banks.
-                  Make sure devices are from banks that have active engineers assigned.
+                  No active engineers found. Please ensure there are active engineers in the system.
                 </p>
               </div>
             </div>
@@ -149,26 +176,12 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
               <option value="">Choose an engineer...</option>
               {engineers.map((engineer) => (
                 <option key={engineer.id} value={engineer.id}>
-                  {engineer.full_name}
+                  {engineer.full_name} {engineer.emp_id ? `(${engineer.emp_id})` : ''}
                 </option>
               ))}
             </select>
           )}
         </div>
-
-        {selectedEngineerData && Object.keys(devicesByBank).length > 1 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-yellow-900">Bank Validation Warning</p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  You've selected devices from multiple banks. Only devices matching the engineer's bank will be issued.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -224,7 +237,7 @@ export function IssueDeviceModal({ isOpen, onClose, selectedDevices, onSuccess }
           </button>
           <button
             onClick={handleIssue}
-            disabled={!selectedEngineer || loading || !!result}
+            disabled={!selectedEngineer || loading || (result && result.success)}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
           >
             <User className="w-4 h-4 mr-2" />
