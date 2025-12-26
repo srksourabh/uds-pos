@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
-=======
->>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -461,36 +457,6 @@ export function Calls() {
         }}
       />
 
-<<<<<<< HEAD
-      {/* CSV Upload Modal */}
-      {showCSVUpload && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Import Calls from CSV</h2>
-              <button
-                onClick={() => setShowCSVUpload(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
-              <CSVUpload
-                onComplete={(results) => {
-                  const successCount = results.filter(r => r.success).length;
-                  if (successCount > 0) {
-                    loadCalls();
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Call Modal */}
-=======
       <CSVUpload
         isOpen={showCSVUpload}
         onClose={() => setShowCSVUpload(false)}
@@ -501,7 +467,6 @@ export function Calls() {
         }}
       />
 
->>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
       {selectedCall && (
         <AssignCallModal
           isOpen={showAssignModal}
@@ -509,23 +474,12 @@ export function Calls() {
             setShowAssignModal(false);
             setSelectedCall(null);
           }}
-<<<<<<< HEAD
-          onSuccess={() => {
-            loadCalls();
-            setShowAssignModal(false);
-            setSelectedCall(null);
-          }}
-          callId={selectedCall.id}
-          callNumber={selectedCall.call_number}
-          currentEngineerId={selectedCall.assigned_engineer}
-=======
           call={selectedCall}
           onSuccess={() => {
             setShowAssignModal(false);
             setSelectedCall(null);
             loadCalls();
           }}
->>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
         />
       )}
     </div>
