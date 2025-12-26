@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { useEffect, useState } from 'react';
+=======
+>>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -453,11 +456,12 @@ export function Calls() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          loadCalls();
           setShowCreateModal(false);
+          loadCalls();
         }}
       />
 
+<<<<<<< HEAD
       {/* CSV Upload Modal */}
       {showCSVUpload && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -486,6 +490,18 @@ export function Calls() {
       )}
 
       {/* Assign Call Modal */}
+=======
+      <CSVUpload
+        isOpen={showCSVUpload}
+        onClose={() => setShowCSVUpload(false)}
+        entity="calls"
+        onSuccess={() => {
+          setShowCSVUpload(false);
+          loadCalls();
+        }}
+      />
+
+>>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
       {selectedCall && (
         <AssignCallModal
           isOpen={showAssignModal}
@@ -493,6 +509,7 @@ export function Calls() {
             setShowAssignModal(false);
             setSelectedCall(null);
           }}
+<<<<<<< HEAD
           onSuccess={() => {
             loadCalls();
             setShowAssignModal(false);
@@ -501,6 +518,14 @@ export function Calls() {
           callId={selectedCall.id}
           callNumber={selectedCall.call_number}
           currentEngineerId={selectedCall.assigned_engineer}
+=======
+          call={selectedCall}
+          onSuccess={() => {
+            setShowAssignModal(false);
+            setSelectedCall(null);
+            loadCalls();
+          }}
+>>>>>>> fc3f0108a2930326ccfe6f65f0b635d4a69a73fb
         />
       )}
     </div>
