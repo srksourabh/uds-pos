@@ -15,7 +15,7 @@ type Device = {
   make?: string;
   part_category?: string;
   status: string;
-  current_location: string | null;
+  current_location_name: string | null;
   assigned_to: string | null;
   device_bank: string;
   created_at: string;
@@ -149,7 +149,7 @@ export function StockManagement() {
         device.make?.toLowerCase().includes(filters.search.toLowerCase());
       
       const statusMatch = filters.status === 'all' || device.status === filters.status;
-      const locationMatch = filters.location === 'all' || device.current_location === filters.location;
+      const locationMatch = filters.location === 'all' || device.current_location_name === filters.location;
       const engineerMatch = filters.engineer === 'all' || device.assigned_to === filters.engineer;
       const categoryMatch = filters.category === 'all' || device.part_category === filters.category;
 
@@ -164,8 +164,8 @@ export function StockManagement() {
     
     devices.forEach(d => {
       byStatus[d.status] = (byStatus[d.status] || 0) + 1;
-      if (d.current_location) {
-        byLocation[d.current_location] = (byLocation[d.current_location] || 0) + 1;
+      if (d.current_location_name) {
+        byLocation[d.current_location_name] = (byLocation[d.current_location_name] || 0) + 1;
       }
     });
 
@@ -207,7 +207,7 @@ export function StockManagement() {
         make: newStock.make,
         part_category: newStock.part_category,
         status: 'warehouse',
-        current_location: warehouse?.name || newStock.warehouse_id,
+        current_location_name: warehouse?.name || newStock.warehouse_id,
         device_bank: '44444444-4444-4444-4444-444444444444', // Default bank
       });
 
@@ -256,7 +256,7 @@ export function StockManagement() {
       const { error } = await supabase
         .from('devices')
         .update({ 
-          current_location: locationName,
+          current_location_name: locationName,
           status: 'in_transit',
           updated_at: new Date().toISOString()
         })
@@ -272,7 +272,7 @@ export function StockManagement() {
           movement_type: 'transfer',
           from_status: device?.status || 'warehouse',
           to_status: 'in_transit',
-          from_location: device?.current_location,
+          from_location: device?.current_location_name,
           to_location: locationName,
           reason: 'Stock transfer',
           notes: `Transferred to ${locationName}`,
@@ -320,7 +320,7 @@ export function StockManagement() {
           movement_type: 'issuance',
           from_status: device?.status || 'warehouse',
           to_status: 'issued',
-          from_location: device?.current_location,
+          from_location: device?.current_location_name,
           to_engineer: engineerId,
           reason: 'Stock issuance',
           notes: `Issued to ${engineer?.full_name}`,
@@ -354,7 +354,7 @@ export function StockManagement() {
         .from('devices')
         .update({ 
           assigned_to: null,
-          current_location: locationName,
+          current_location_name: locationName,
           status: 'warehouse',
           updated_at: new Date().toISOString()
         })
@@ -450,7 +450,7 @@ export function StockManagement() {
             make: row['make'] || row['brand'] || 'Unknown',
             part_category: row['part category'] || row['category'] || row['part_category'] || 'POS Terminal',
             status: 'warehouse',
-            current_location: row['location'] || row['fsp center'] || row['warehouse'] || 'Main Warehouse',
+            current_location_name: row['location'] || row['fsp center'] || row['warehouse'] || 'Main Warehouse',
             device_bank: '44444444-4444-4444-4444-444444444444',
             notes: row['notes'] || row['remarks'] || '',
           };
@@ -786,7 +786,7 @@ export function StockManagement() {
                         </span>
                       </td>
                       <td className="table-td-responsive text-sm text-gray-600">
-                        {device.current_location || '-'}
+                        {device.current_location_name || '-'}
                       </td>
                       <td className="table-td-responsive text-sm">
                         {device.user_profiles ? (

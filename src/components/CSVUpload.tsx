@@ -505,7 +505,7 @@ interface StockCSVRow {
   device_bank?: string;
   bank_name?: string;
   status?: string;
-  current_location?: string;
+  current_location_name?: string;
   warehouse_name?: string;
   firmware_version?: string;
   warranty_expiry?: string;
@@ -693,8 +693,8 @@ export function StockCSVUpload({ onComplete, defaultBankId, defaultWarehouseId }
 
         // Resolve warehouse/location
         let location = selectedWarehouse || null;
-        if (row.current_location) {
-          location = row.current_location;
+        if (row.current_location_name) {
+          location = row.current_location_name;
         } else if (row.warehouse_name) {
           const foundWarehouse = warehouses.find(w => 
             w.name.toLowerCase() === row.warehouse_name!.toLowerCase()
@@ -707,7 +707,7 @@ export function StockCSVUpload({ onComplete, defaultBankId, defaultWarehouseId }
           model: row.model.trim(),
           device_bank: bankId,
           status: (row.status?.toLowerCase() as DeviceStatus) || 'warehouse',
-          current_location: location,
+          current_location_name: location,
           firmware_version: row.firmware_version?.trim() || null,
           warranty_expiry: row.warranty_expiry || null,
           notes: row.notes?.trim() || '',

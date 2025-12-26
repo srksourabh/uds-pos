@@ -479,7 +479,7 @@ export type Database = {
           model: string
           device_bank: string
           status: DeviceStatus
-          current_location: string | null
+          current_location_name: string | null
           assigned_to: string | null
           installed_at_client: string | null
           installation_date: string | null

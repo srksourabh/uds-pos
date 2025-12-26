@@ -860,7 +860,13 @@ export function InTransit() {
                   shipment.destination_type === 'warehouse' ? 'warehouse' : 
                   'installed',
           current_location_type: shipment.destination_type,
+          current_location_id: shipment.destination_id,
         };
+
+        // If destination is engineer, set assigned_to
+        if (shipment.destination_type === 'engineer' && shipment.destination_id) {
+          deviceUpdates.assigned_to = shipment.destination_id;
+        }
 
         // Update devices
         const { error: deviceError } = await supabase
@@ -878,7 +884,7 @@ export function InTransit() {
     } catch (error: any) {
       alert(`Error updating shipment: ${error.message}`);
     }
-  };;
+  };;;
 
   // Tab counts
   const statusCounts = {
