@@ -125,7 +125,8 @@ export function AddDeviceModal({ isOpen, onClose, onSuccess }: AddDeviceModalPro
           condition_status: formData.condition_status,
           whereabouts: formData.whereabouts,
           status: 'warehouse',
-          current_location: 'warehouse',
+          current_location_type: 'warehouse',
+          current_location_name: 'Main Warehouse',
         });
 
       if (error) throw error;
