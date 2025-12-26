@@ -48,6 +48,16 @@
 - Table now scrolls horizontally on smaller screens
 - **Status**: COMPLETED & COMMITTED
 
+### 7. Call Cancellation with Mandatory Reason ✅
+- Created CancelCallModal component with required reason field
+- Replaced simple confirm dialog with proper modal for cancellations
+- Added `cancellation_reason` and `cancelled_at` fields to calls table
+- Validates reason is not empty before allowing cancellation
+- Shows cancellation context in warning box
+- Records cancellation timestamp
+- Migration: `20251226000002_add_call_cancellation_fields.sql`
+- **Status**: COMPLETED & COMMITTED
+
 ## Remaining Issues to Fix
 
 ### User Management
@@ -60,7 +70,7 @@
 ### Call Management
 - [ ] **Issue 3**: Fix Call CSV Upload error
 - [ ] **Issue 4**: Cannot assign calls to all FSEs (some showing error)
-- [ ] **Issue 5a**: Add cancellation popup with mandatory reason
+- [x] **Issue 5a**: Add cancellation popup with mandatory reason - ✅ DONE
 - [ ] **Issue 5b**: Add mandatory field validation for call completion
   - Call Status (Closed/Problematic/Reschedule)
   - Action Taken
