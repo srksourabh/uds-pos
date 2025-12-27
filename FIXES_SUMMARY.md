@@ -34,6 +34,30 @@
 - Displays detailed upload results with success/error counts
 - **Status**: COMPLETED & COMMITTED
 
+### 5. In-Transit Status Update Fix ✅
+- Fixed devices not updating status after marking delivery to engineer
+- Now properly sets both `assigned_to` and `assigned_engineer` fields
+- Sets `current_location_name` with engineer's full name
+- Clears assignments when returning to warehouse
+- View Details button confirmed already exists
+- **Status**: COMPLETED & COMMITTED
+
+### 6. Device Tab Horizontal Scroll Fix ✅
+- Fixed horizontal scroll not working on devices table
+- Removed `overflow-hidden` from outer div that was blocking scroll
+- Table now scrolls horizontally on smaller screens
+- **Status**: COMPLETED & COMMITTED
+
+### 7. Call Cancellation with Mandatory Reason ✅
+- Created CancelCallModal component with required reason field
+- Replaced simple confirm dialog with proper modal for cancellations
+- Added `cancellation_reason` and `cancelled_at` fields to calls table
+- Validates reason is not empty before allowing cancellation
+- Shows cancellation context in warning box
+- Records cancellation timestamp
+- Migration: `20251226000002_add_call_cancellation_fields.sql`
+- **Status**: COMPLETED & COMMITTED
+
 ## Remaining Issues to Fix
 
 ### User Management
@@ -46,7 +70,7 @@
 ### Call Management
 - [ ] **Issue 3**: Fix Call CSV Upload error
 - [ ] **Issue 4**: Cannot assign calls to all FSEs (some showing error)
-- [ ] **Issue 5a**: Add cancellation popup with mandatory reason
+- [x] **Issue 5a**: Add cancellation popup with mandatory reason - ✅ DONE
 - [ ] **Issue 5b**: Add mandatory field validation for call completion
   - Call Status (Closed/Problematic/Reschedule)
   - Action Taken
@@ -61,15 +85,15 @@
 - [ ] **Issue 5e**: Fix All Calls vs Pending calls duplication
 
 ### Device Management
-- [ ] **Issue 1a**: Fix horizontal scroll on Device Tab
-- [ ] **Issue 1b**: Fix Add Device error - ✅ DONE (added columns)
+- [x] **Issue 1a**: Fix horizontal scroll on Device Tab - ✅ DONE
+- [x] **Issue 1b**: Fix Add Device error - ✅ DONE (added columns)
 - [ ] **Issue 1c**: Fix Import Device unauthorized error
 - [ ] **Issue 1d**: Fix device assignment to engineer
 - [ ] **Issue 1e**: Add option to edit assigned engineer
 
 ### In-Transit Management
-- [ ] **Issue 2a**: Fix status not updating after delivery to engineer
-- [ ] **Issue 2b**: Add View Details button
+- [x] **Issue 2a**: Fix status not updating after delivery to engineer - ✅ DONE
+- [x] **Issue 2b**: Add View Details button - ✅ DONE (already exists)
 
 ### Receive Stock
 - [ ] **Issue 3a**: Fix barcode scanner not working

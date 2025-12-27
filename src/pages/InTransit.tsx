@@ -853,19 +853,34 @@ export function InTransit() {
       // Update device statuses when delivered
       if (newStatus === 'delivered' && shipment.device_ids && shipment.device_ids.length > 0) {
         const deviceUpdates: any = {
-          whereabouts: shipment.destination_type === 'engineer' ? 'engineer' : 
-                       shipment.destination_type === 'warehouse' ? 'warehouse' : 
+          whereabouts: shipment.destination_type === 'engineer' ? 'engineer' :
+                       shipment.destination_type === 'warehouse' ? 'warehouse' :
                        'installed',
-          status: shipment.destination_type === 'engineer' ? 'issued' : 
-                  shipment.destination_type === 'warehouse' ? 'warehouse' : 
+          status: shipment.destination_type === 'engineer' ? 'issued' :
+                  shipment.destination_type === 'warehouse' ? 'warehouse' :
                   'installed',
           current_location_type: shipment.destination_type,
-          current_location_id: shipment.destination_id,
         };
 
-        // If destination is engineer, set assigned_to
+        // If destination is engineer, set both assigned_to and assigned_engineer
         if (shipment.destination_type === 'engineer' && shipment.destination_id) {
           deviceUpdates.assigned_to = shipment.destination_id;
+          deviceUpdates.assigned_engineer = shipment.destination_id;
+
+          // Get engineer name for current_location_name
+          const { data: engineer } = await supabase
+            .from('user_profiles')
+            .select('full_name')
+            .eq('id', shipment.destination_id)
+            .single();
+
+          if (engineer) {
+            deviceUpdates.current_location_name = engineer.full_name;
+          }
+        } else if (shipment.destination_type === 'warehouse') {
+          deviceUpdates.assigned_to = null;
+          deviceUpdates.assigned_engineer = null;
+          deviceUpdates.current_location_name = 'Warehouse';
         }
 
         // Update devices

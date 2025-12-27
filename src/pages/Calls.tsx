@@ -6,6 +6,7 @@ import type { Database } from '../lib/database.types';
 import { CreateCallModal } from '../components/CreateCallModal';
 import { CSVUpload } from '../components/CSVUpload';
 import { AssignCallModal } from '../components/AssignCallModal';
+import { CancelCallModal } from '../components/CancelCallModal';
 import { UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { SLAIndicator, AgeingIndicator } from '../components/SLAIndicator';
 import { ProblemCodeBadge } from '../components/ProblemCodeSelect';
@@ -27,7 +28,9 @@ export function Calls() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [callToCancel, setCallToCancel] = useState<{ id: string; number: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -207,7 +210,22 @@ export function Calls() {
     setShowAssignModal(true);
   };
 
+  const handleCancelCall = (call: Call) => {
+    setCallToCancel({ id: call.id, number: call.call_number });
+    setShowCancelModal(true);
+  };
+
   const handleUpdateStatus = async (callId: string, newStatus: 'completed' | 'cancelled') => {
+    // For cancellation, use the modal instead
+    if (newStatus === 'cancelled') {
+      const call = calls.find(c => c.id === callId);
+      if (call) {
+        handleCancelCall(call);
+      }
+      return;
+    }
+
+    // For completion, show confirmation
     if (!window.confirm(`Are you sure you want to mark this call as ${newStatus}?`)) {
       return;
     }
@@ -217,7 +235,7 @@ export function Calls() {
       const updateData: Record<string, any> = {
         status: newStatus,
       };
-      
+
       if (newStatus === 'completed') {
         updateData.completed_at = new Date().toISOString();
       }
@@ -478,6 +496,23 @@ export function Calls() {
           onSuccess={() => {
             setShowAssignModal(false);
             setSelectedCall(null);
+            loadCalls();
+          }}
+        />
+      )}
+
+      {callToCancel && (
+        <CancelCallModal
+          callId={callToCancel.id}
+          callNumber={callToCancel.number}
+          isOpen={showCancelModal}
+          onClose={() => {
+            setShowCancelModal(false);
+            setCallToCancel(null);
+          }}
+          onSuccess={() => {
+            setShowCancelModal(false);
+            setCallToCancel(null);
             loadCalls();
           }}
         />
