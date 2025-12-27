@@ -515,8 +515,10 @@ export type Database = {
           model: string
           device_bank: string
           status?: DeviceStatus
-          current_location?: string | null
+          current_location_name?: string | null
+          current_location_type?: string | null
           assigned_to?: string | null
+          assigned_engineer?: string | null
           installed_at_client?: string | null
           installation_date?: string | null
           warranty_expiry?: string | null
@@ -536,6 +538,8 @@ export type Database = {
           used_for_ticket?: string | null
           receiving_date?: string | null
           used_date?: string | null
+          tid?: string | null
+          ageing_days?: number | null
           // Phase 2: Extended Device Fields
           customer_id?: string | null
           device_category?: string | null
@@ -550,8 +554,10 @@ export type Database = {
           model?: string
           device_bank?: string
           status?: DeviceStatus
-          current_location?: string | null
+          current_location_name?: string | null
+          current_location_type?: string | null
           assigned_to?: string | null
+          assigned_engineer?: string | null
           installed_at_client?: string | null
           installation_date?: string | null
           warranty_expiry?: string | null
@@ -571,6 +577,8 @@ export type Database = {
           used_for_ticket?: string | null
           receiving_date?: string | null
           used_date?: string | null
+          tid?: string | null
+          ageing_days?: number | null
           // Phase 2: Extended Device Fields
           customer_id?: string | null
           device_category?: string | null

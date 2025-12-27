@@ -13,14 +13,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { PincodeMaster, PincodeMasterWithCoordinator, UserProfile, ServicePriority } from '../lib/database.types';
-import { 
-  MapPin, 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Clock, 
-  CheckCircle, 
+import {
+  MapPin,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Clock,
+  CheckCircle,
   XCircle,
   Filter,
   ChevronDown,
@@ -28,7 +28,10 @@ import {
   User,
   Building,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Download,
+  FileText
 } from 'lucide-react';
 
 // Priority badge colors
@@ -85,6 +88,12 @@ export default function PincodeMasterPage() {
     primary_coordinator_id: ''
   });
   const [saving, setSaving] = useState(false);
+
+  // CSV Upload state
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [csvFile, setCSVFile] = useState<File | null>(null);
+  const [csvUploading, setCSVUploading] = useState(false);
+  const [csvResults, setCSVResults] = useState<{imported: number; errors: string[]} | null>(null);
 
   // User role check (for edit permissions)
   const [userRole, setUserRole] = useState<string>('');
@@ -336,6 +345,88 @@ export default function PincodeMasterPage() {
     setFilterServiceable('all');
   };
 
+  // Handle CSV Upload
+  const handleCSVUpload = async () => {
+    if (!csvFile) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    setCSVUploading(true);
+    setCSVResults(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const text = await csvFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+      // Expected headers: pin_code, area_name, city, district, state, region, sla_hours, service_priority, is_serviceable
+      const requiredHeaders = ['pin_code', 'city', 'state', 'region'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+      if (missingHeaders.length > 0) {
+        alert(`Missing required columns: ${missingHeaders.join(', ')}`);
+        setCSVUploading(false);
+        return;
+      }
+
+      const errors: string[] = [];
+      let imported = 0;
+
+      // Process each row
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const values = line.split(',').map(v => v.trim());
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || null;
+        });
+
+        // Validate pin_code
+        if (!row.pin_code || !/^\d{6}$/.test(row.pin_code)) {
+          errors.push(`Row ${i + 1}: Invalid pincode ${row.pin_code}`);
+          continue;
+        }
+
+        try {
+          await supabase.from('pincode_master').insert({
+            pin_code: row.pin_code,
+            area_name: row.area_name || null,
+            city: row.city,
+            district: row.district || null,
+            state: row.state,
+            region: row.region,
+            sla_hours: parseInt(row.sla_hours) || 48,
+            service_priority: (row.service_priority as ServicePriority) || 'normal',
+            is_serviceable: row.is_serviceable?.toLowerCase() !== 'false',
+            primary_coordinator_id: null,
+            created_by: user?.id
+          });
+          imported++;
+        } catch (err: any) {
+          if (err.code === '23505') {
+            errors.push(`Row ${i + 1}: Pincode ${row.pin_code} already exists`);
+          } else {
+            errors.push(`Row ${i + 1}: ${err.message}`);
+          }
+        }
+      }
+
+      setCSVResults({ imported, errors });
+      fetchPincodes();
+
+    } catch (err: any) {
+      console.error('CSV upload error:', err);
+      alert('Failed to process CSV file: ' + err.message);
+    } finally {
+      setCSVUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -360,13 +451,22 @@ export default function PincodeMasterPage() {
         </div>
         
         {isAdmin && (
-          <button
-            onClick={() => openModal()}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Add Pincode
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => openModal()}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add Pincode
+            </button>
+            <button
+              onClick={() => setShowCSVModal(true)}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Upload className="w-5 h-5" />
+              Upload CSV
+            </button>
+          </div>
         )}
       </div>
 
@@ -821,6 +921,120 @@ export default function PincodeMasterPage() {
                 {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
                 {editingPincode ? 'Update' : 'Add'} Pincode
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Upload Modal */}
+      {showCSVModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+            {/* Modal Header */}
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Upload className="w-6 h-6 text-green-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Upload Pincodes CSV</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCSVModal(false);
+                    setCSVFile(null);
+                    setCSVResults(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* CSV Format Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-medium text-blue-900 mb-2">CSV Format</h3>
+                    <p className="text-sm text-blue-800 mb-2">
+                      Required columns: <strong>pin_code, city, state, region</strong>
+                    </p>
+                    <p className="text-sm text-blue-800 mb-2">
+                      Optional columns: area_name, district, sla_hours, service_priority, is_serviceable
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      Example: 110001,Connaught Place,Delhi,,Delhi,Delhi,48,normal,true
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* File Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select CSV File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setCSVFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                />
+              </div>
+
+              {/* Results */}
+              {csvResults && (
+                <div className={`p-4 rounded-lg ${csvResults.errors.length > 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
+                  <h3 className="font-medium text-gray-900 mb-2">Upload Results</h3>
+                  <p className="text-sm text-gray-700 mb-1">
+                    ✓ Successfully imported: <strong>{csvResults.imported}</strong> pincodes
+                  </p>
+                  {csvResults.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm text-yellow-800 font-medium mb-1">
+                        ⚠ Errors ({csvResults.errors.length}):
+                      </p>
+                      <div className="max-h-32 overflow-y-auto">
+                        {csvResults.errors.slice(0, 10).map((error, idx) => (
+                          <p key={idx} className="text-xs text-yellow-700">{error}</p>
+                        ))}
+                        {csvResults.errors.length > 10 && (
+                          <p className="text-xs text-yellow-700 mt-1">
+                            ... and {csvResults.errors.length - 10} more errors
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCSVModal(false);
+                  setCSVFile(null);
+                  setCSVResults(null);
+                }}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-100"
+                disabled={csvUploading}
+              >
+                {csvResults ? 'Close' : 'Cancel'}
+              </button>
+              {!csvResults && (
+                <button
+                  onClick={handleCSVUpload}
+                  disabled={!csvFile || csvUploading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {csvUploading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  {csvUploading ? 'Uploading...' : 'Upload CSV'}
+                </button>
+              )}
             </div>
           </div>
         </div>
