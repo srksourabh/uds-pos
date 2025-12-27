@@ -3,6 +3,7 @@ import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Download } from 
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import type { CallType, Priority, DeviceStatus } from '../lib/database.types';
+import { Modal } from './Modal';
 
 interface CSVRow {
   call_number?: string;
@@ -39,7 +40,10 @@ interface UploadResult {
 }
 
 interface CSVUploadProps {
-  onComplete?: (results: UploadResult[]) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  entity: 'calls' | 'stock';
+  onSuccess?: () => void;
   bankId?: string;
 }
 
@@ -47,7 +51,7 @@ const REQUIRED_COLUMNS = ['call_number', 'type', 'customer_name', 'merchant_name
 const VALID_TYPES = ['install', 'swap', 'deinstall', 'maintenance', 'breakdown'];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
-export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
+export function CSVUpload({ isOpen, onClose, entity, onSuccess, bankId }: CSVUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<CSVRow[]>([]);
@@ -269,7 +273,7 @@ export function CSVUpload({ onComplete, bankId }: CSVUploadProps) {
     setResults(uploadResults);
     setUploading(false);
     setStep('results');
-    onComplete?.(uploadResults);
+    onSuccess?.();
   };
 
   const downloadTemplate = () => {
@@ -297,21 +301,18 @@ CALL-002,maintenance,medium,ICICI,West,2024-01-16,TID002,MID987654321098,TICKET-
     }
   };
 
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
   if (step === 'results') {
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Upload Results</h3>
-          <button
-            onClick={reset}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            Upload Another File
-          </button>
-        </div>
+      <Modal isOpen={isOpen} onClose={handleClose} title="CSV Import Results">
+        <div className="space-y-4">
 
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
@@ -342,26 +343,15 @@ CALL-002,maintenance,medium,ICICI,West,2024-01-16,TID002,MID987654321098,TICKET-
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Modal>
     );
   }
 
   if (step === 'preview') {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-500" />
-            <span className="font-medium">{file?.name}</span>
-            <span className="text-sm text-gray-500">({parsedData.length} rows)</span>
-          </div>
-          <button
-            onClick={reset}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Cancel
-          </button>
-        </div>
+      <Modal isOpen={isOpen} onClose={handleClose} title="Preview CSV Data">
+        <div className="space-y-4">
 
         {validationErrors.length > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -433,14 +423,15 @@ CALL-002,maintenance,medium,ICICI,West,2024-01-16,TID002,MID987654321098,TICKET-
             )}
           </button>
         </div>
-      </div>
+        </div>
+      </Modal>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Upload Calls from CSV</h3>
+    <Modal isOpen={isOpen} onClose={handleClose} title="Import Calls from CSV">
+      <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <button
           onClick={downloadTemplate}
           className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
@@ -491,7 +482,8 @@ CALL-002,maintenance,medium,ICICI,West,2024-01-16,TID002,MID987654321098,TICKET-
           <strong>Note:</strong> Use bank name (HDFC, ICICI, Axis, SBI, Kotak) in customer_name column - UUIDs are not required!
         </p>
       </div>
-    </div>
+      </div>
+    </Modal>
   );
 }
 
