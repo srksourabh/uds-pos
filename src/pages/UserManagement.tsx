@@ -27,6 +27,10 @@ import {
   Globe,
   Truck,
   MapPinned,
+  Upload,
+  FileUp,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import {
   getAllModules,
@@ -239,7 +243,15 @@ export function UserManagement() {
     role: 'engineer' as UserRole,
     emp_id: '',
     designation: '',
+    home_pincode: '',
+    office_id: '',
   });
+
+  // CSV upload state
+  const [showCSVUploadModal, setShowCSVUploadModal] = useState(false);
+  const [csvFile, setCSVFile] = useState<File | null>(null);
+  const [csvUploading, setCSVUploading] = useState(false);
+  const [csvResults, setCSVResults] = useState<{success: number; failed: number; errors: string[]} | null>(null);
 
   // Customer form state
   const [customerForm, setCustomerForm] = useState({
@@ -550,8 +562,14 @@ export function UserManagement() {
   };
 
   const handleCreateUser = async () => {
-    if (!newUser.email || !newUser.full_name) {
-      setFormError('Email and Full Name are required');
+    if (!newUser.email || !newUser.full_name || !newUser.home_pincode) {
+      setFormError('Email, Full Name, and Pincode are required');
+      return;
+    }
+
+    // Validate pincode format (6 digits)
+    if (!/^\d{6}$/.test(newUser.home_pincode)) {
+      setFormError('Pincode must be exactly 6 digits');
       return;
     }
 
@@ -582,6 +600,8 @@ export function UserManagement() {
         role: newUser.role,
         emp_id: newUser.emp_id || null,
         designation: newUser.designation || null,
+        home_pincode: newUser.home_pincode || null,
+        office_id: newUser.office_id || null,
         active: true,
         status: 'pending_approval',
       });
@@ -596,12 +616,118 @@ export function UserManagement() {
         role: 'engineer',
         emp_id: '',
         designation: '',
+        home_pincode: '',
+        office_id: '',
       });
       loadUsers();
     } catch (error: any) {
       setFormError(error.message || 'Failed to create user');
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  // CSV Upload handler
+  const handleCSVUpload = async () => {
+    if (!csvFile) {
+      setFormError('Please select a CSV file');
+      return;
+    }
+
+    setCSVUploading(true);
+    setFormError(null);
+    setCSVResults(null);
+
+    try {
+      const text = await csvFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        setFormError('CSV file is empty or has no data rows');
+        setCSVUploading(false);
+        return;
+      }
+
+      // Parse header
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const expectedHeaders = ['email', 'full_name', 'phone', 'role', 'emp_id', 'designation', 'pincode', 'office_id'];
+      
+      // Validate headers
+      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        setFormError(`Missing required CSV columns: ${missingHeaders.join(', ')}`);
+        setCSVUploading(false);
+        return;
+      }
+
+      const results = { success: 0, failed: 0, errors: [] as string[] };
+      
+      // Process each row
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const row: any = {};
+        
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+
+        try {
+          // Validation
+          if (!row.email || !row.full_name || !row.pincode) {
+            results.errors.push(`Row ${i + 1}: Missing required fields (email, full_name, or pincode)`);
+            results.failed++;
+            continue;
+          }
+
+          if (!/^\d{6}$/.test(row.pincode)) {
+            results.errors.push(`Row ${i + 1}: Invalid pincode format (must be 6 digits)`);
+            results.failed++;
+            continue;
+          }
+
+          // Check if email already exists
+          const { data: existingUser } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('email', row.email.toLowerCase())
+            .single();
+
+          if (existingUser) {
+            results.errors.push(`Row ${i + 1}: Email ${row.email} already exists`);
+            results.failed++;
+            continue;
+          }
+
+          // Create user
+          const { error } = await supabase.from('user_profiles').insert({
+            id: crypto.randomUUID(),
+            email: row.email.toLowerCase(),
+            full_name: row.full_name,
+            phone: row.phone || null,
+            role: row.role || 'engineer',
+            emp_id: row.emp_id || null,
+            designation: row.designation || null,
+            home_pincode: row.pincode,
+            office_id: row.office_id || null,
+            active: true,
+            status: 'pending_approval',
+          });
+
+          if (error) throw error;
+          
+          results.success++;
+        } catch (error: any) {
+          results.errors.push(`Row ${i + 1}: ${error.message}`);
+          results.failed++;
+        }
+      }
+
+      setCSVResults(results);
+      loadUsers();
+    } catch (error: any) {
+      setFormError(error.message || 'Failed to process CSV file');
+    } finally {
+      setCSVUploading(false);
     }
   };
 
@@ -1339,13 +1465,22 @@ export function UserManagement() {
               </select>
             </div>
             {(isSuperAdmin || isAdmin) && (
-              <button
-                onClick={() => setShowCreateUserModal(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                <UserPlus className="w-5 h-5 mr-2" />
-                Add User
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Add User
+                </button>
+                <button
+                  onClick={() => setShowCSVUploadModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  CSV Upload
+                </button>
+              </div>
             )}
           </div>
 
@@ -2148,6 +2283,35 @@ export function UserManagement() {
                   placeholder="Field Service Engineer"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+                <input
+                  type="text"
+                  value={newUser.home_pincode}
+                  onChange={(e) => setNewUser({ ...newUser, home_pincode: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="700001"
+                  maxLength={6}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Office/Warehouse</label>
+                <select
+                  value={newUser.office_id}
+                  onChange={(e) => setNewUser({ ...newUser, office_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Select Office/Warehouse</option>
+                  {warehouses
+                    .filter(w => w.is_active)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(warehouse => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.code} - {warehouse.name} ({warehouse.city || 'N/A'})
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
               <button
@@ -2909,6 +3073,166 @@ export function UserManagement() {
                 )}
                 {editingCourier ? 'Save Changes' : 'Add Courier'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Upload Modal */}
+      {showCSVUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <Upload className="w-6 h-6 text-green-600" />
+                Bulk Upload Users (CSV)
+              </h2>
+              <button
+                onClick={() => {
+                  setShowCSVUploadModal(false);
+                  setCSVFile(null);
+                  setCSVResults(null);
+                  setFormError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <FileUp className="w-5 h-5" />
+                  CSV Format Requirements
+                </h3>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p><strong>Required columns:</strong> email, full_name, pincode</p>
+                  <p><strong>Optional columns:</strong> phone, role, emp_id, designation, office_id</p>
+                  <p><strong>Note:</strong> First row must be the header with column names (case-insensitive)</p>
+                </div>
+              </div>
+
+              {/* CSV Template Example */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Example CSV Format:</h4>
+                <pre className="text-xs bg-white p-3 rounded border border-gray-300 overflow-x-auto">
+{`email,full_name,phone,role,emp_id,designation,pincode,office_id
+john@example.com,John Doe,+919876543210,engineer,UDSPL001,Field Engineer,700001,
+jane@example.com,Jane Smith,+919876543211,coordinator,UDSPL002,Stock Coordinator,700002,warehouse-id-here`}
+                </pre>
+              </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {formError}
+                </div>
+              )}
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select CSV File *
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                          setFormError('Please select a valid CSV file');
+                          setCSVFile(null);
+                        } else {
+                          setCSVFile(file);
+                          setFormError(null);
+                          setCSVResults(null);
+                        }
+                      }
+                    }}
+                    className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {csvFile && (
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <CheckCircle2 className="w-4 h-4" />
+                      {csvFile.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Results */}
+              {csvResults && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-green-700 mb-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="font-semibold">Success</span>
+                      </div>
+                      <div className="text-2xl font-bold text-green-900">{csvResults.success}</div>
+                      <div className="text-xs text-green-600">Users created</div>
+                    </div>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-red-700 mb-1">
+                        <XCircle className="w-5 h-5" />
+                        <span className="font-semibold">Failed</span>
+                      </div>
+                      <div className="text-2xl font-bold text-red-900">{csvResults.failed}</div>
+                      <div className="text-xs text-red-600">Errors occurred</div>
+                    </div>
+                  </div>
+
+                  {csvResults.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                      <h4 className="font-semibold text-red-900 mb-2">Error Details:</h4>
+                      <ul className="text-sm text-red-800 space-y-1">
+                        {csvResults.errors.map((error, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-red-600 mt-0.5">•</span>
+                            <span>{error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowCSVUploadModal(false);
+                  setCSVFile(null);
+                  setCSVResults(null);
+                  setFormError(null);
+                }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                {csvResults ? 'Close' : 'Cancel'}
+              </button>
+              {!csvResults && (
+                <button
+                  onClick={handleCSVUpload}
+                  disabled={!csvFile || csvUploading}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {csvUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 mr-2" />
+                      Upload & Create Users
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
